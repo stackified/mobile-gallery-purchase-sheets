@@ -61,12 +61,13 @@ manifest.webmanifest     installable-app metadata
 sw.js                    offline cache + update probe
 version.json             build id, regenerated on every deploy
 icons/                   launcher icons (192/512/maskable/apple/favicon)
-.github/workflows/       deploy to GitHub Pages, stamps the build id
+build.sh                 stamps the build id, run by Cloudflare on each push
+_headers                 CDN cache rules the update flow depends on
 
 MobileGallery-v1.apk     signed Android build, app bundled inside
 mobile-gallery-release.keystore   signing key — see warning below
 
-SETUP-GITHUB.md          hosting + auto-update setup
+SETUP-HOSTING.md          hosting + auto-update setup
 BUILD-APK.md             cloud APK build (PWABuilder)
 APK-NOTES.md             local APK build, install steps, keystore details
 archive/excel/           the original Excel workbook, 14 iterations
@@ -78,7 +79,7 @@ archive/excel/           the original Excel workbook, 14 iterations
 
 Open `index.html` in any browser. That is genuinely all.
 
-For the phone, host it (see `SETUP-GITHUB.md`) and use
+For the phone, host it (see `SETUP-HOSTING.md`) and use
 **Chrome → ⋮ → Add to Home screen**. It launches with no address bar and
 works offline.
 
@@ -86,14 +87,13 @@ works offline.
 
 ## Updating
 
-Push to `main` → GitHub Actions publishes and stamps a new build id → the app
+Push to `main` → Cloudflare Pages builds and stamps a new build id → the app
 notices within 30 minutes (or on next open) and offers **Update / Later**.
 Tapping Update clears caches and reloads; master data is in localStorage and is
 deliberately left alone.
 
-Note: **GitHub Pages does not serve private repos on a free plan.** While this
-repo is private, either make it public or hold a GitHub Pro plan for the
-auto-update flow to work. Everything else works regardless.
+Hosted on **Cloudflare Pages**, which serves private repos free — GitHub Pages
+does not. Setup is in `SETUP-HOSTING.md`.
 
 ---
 
@@ -109,7 +109,7 @@ generate a new key and ship a fresh install. The store password is in
 `APK-NOTES.md` for the same reason and with the same caveat.
 
 **The APK does not auto-update.** It carries its own copy of the app inside it,
-so new versions need a fresh install. `SETUP-GITHUB.md` has a three-line config
+so new versions need a fresh install. `SETUP-HOSTING.md` has a three-line config
 change to point it at the hosted URL instead, which makes it auto-update at the
 cost of needing internet on first launch.
 

@@ -12,3 +12,6 @@ www/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Cloudflare Pages build output
+_site/
