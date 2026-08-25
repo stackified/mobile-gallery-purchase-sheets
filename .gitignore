@@ -1,0 +1,14 @@
+# Local print/test artifacts
+A.pdf
+*.tmp
+
+# Build scratch
+node_modules/
+build.log
+android/
+www/
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store

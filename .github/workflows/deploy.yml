@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+# Every push to main publishes the app and stamps a fresh build id, which is
+# what makes the phone notice an update is available.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a newer push cancel an in-flight deploy rather than queueing behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp build id
+        run: |
+          set -euo pipefail
+          BUILD="$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
+          echo "Build id: $BUILD"
+
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js icons _site/
+
+          # the app and the worker both learn their own build id
+          sed -i "s/__BUILD_ID__/$BUILD/g" _site/index.html _site/sw.js
+
+          # the probe the running app polls
+          printf '{"build":"%s","deployed":"%s"}\n' \
+            "$BUILD" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/version.json
+
+          # Pages would otherwise run Jekyll and drop files starting with _
+          touch _site/.nojekyll
+
+          echo "--- verify stamp applied ---"
+          grep -q "__BUILD_ID__" _site/index.html && { echo "ERROR: index.html not stamped"; exit 1; } || true
+          grep -q "__BUILD_ID__" _site/sw.js      && { echo "ERROR: sw.js not stamped"; exit 1; } || true
+          cat _site/version.json
+          ls -la _site
+
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - uses: actions/deploy-pages@v4
+        id: deployment
