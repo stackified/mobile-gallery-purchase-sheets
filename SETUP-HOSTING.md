@@ -26,17 +26,18 @@ constraint.
 
 ### 2. Connect the repo
 
-Dashboard → **Workers & Pages** → **Create** → **Pages** →
-**Connect to Git** → authorise GitHub.
+Dashboard → **Workers & Pages** → **Create**.
 
-When GitHub asks which repositories to grant, pick **Only select repositories**
-and choose `mobile-gallery-purchase-sheets`. Cloudflare needs read access; it
-never needs write.
+You will see two tabs: **Workers** and **Pages**. They both work, but they are
+configured differently — pick one and follow the matching section below.
 
-> Authorise with the **`stackified`** account, since that is where the repo
-> lives.
+Authorise with the **`stackified`** GitHub account, since that is where the repo
+lives. When GitHub asks which repositories, choose **Only select repositories**
+and pick `mobile-gallery-purchase-sheets`. Cloudflare only needs read access.
 
-### 3. Build settings
+---
+
+### 3a. If you use the **Pages** tab  *(simpler — recommended)*
 
 | Field | Value |
 |---|---|
@@ -44,19 +45,37 @@ never needs write.
 | Framework preset | **None** |
 | Build command | `bash build.sh` |
 | Build output directory | `_site` |
-| Root directory | *(leave blank)* |
+| Root directory | *(blank)* |
 
-Nothing else to change. No environment variables needed.
+No API token, no deploy command, nothing else. `wrangler.jsonc` is ignored.
 
-### 4. Deploy
+---
 
-Hit **Save and Deploy**. First build takes about 30 seconds. You get:
+### 3b. If you use the **Workers** tab
 
-```
-https://mobile-gallery-purchase-sheets.pages.dev
-```
+Cloudflare's newer default. The screen says *"Configure your Worker project"*
+and asks for a **Deploy command** and an **API token**.
 
-### 5. Put it on his phone
+| Field | Value |
+|---|---|
+| Project name | `mobile-gallery-purchase-sheets` |
+| Build command | `bash build.sh` |
+| Deploy command | `npx wrangler deploy` |
+| Path | `/` |
+| API token | **Create new token** (accept the default permissions) |
+| Variable name / value | *leave both blank* |
+
+This path needs `wrangler.jsonc`, which is in the repo. It points Cloudflare at
+`_site/` and serves it as a static-assets Worker — no server code.
+
+**Without that file `npx wrangler deploy` fails**, which is the error you hit if
+you tried this before pulling the latest commit.
+
+The token it offers covers R2, D1, KV, Queues and more. A static site uses none
+of them; it is just Cloudflare's standard Workers token. Harmless, but it is one
+reason the Pages tab is the tidier choice.
+
+### 4. Put it on his phone
 
 Open that URL in **Chrome on his phone** → **⋮** → **Add to Home screen** →
 **Install**.

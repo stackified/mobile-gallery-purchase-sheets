@@ -1,0 +1,23 @@
+{
+  // Only needed if this is deployed as a Cloudflare *Worker* (the newer
+  // "Workers & Pages -> Workers" flow, deploy command `npx wrangler deploy`).
+  //
+  // The classic Pages flow ignores this file entirely and just serves the
+  // build output directory — either path works, see SETUP-HOSTING.md.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mobile-gallery-purchase-sheets",
+  "compatibility_date": "2025-01-01",
+
+  // Static-assets-only Worker: no `main` script, Cloudflare just serves the
+  // files. `_headers` inside this directory is honoured, which is what keeps
+  // version.json uncached and the update flow working.
+  "assets": {
+    "directory": "./_site",
+    // The app is a single page; anything else genuinely is a 404.
+    "not_found_handling": "none"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
