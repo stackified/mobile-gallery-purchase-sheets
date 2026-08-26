@@ -1,0 +1,23 @@
+# Normalise text to LF in the repository regardless of the machine committing.
+* text=auto
+
+# These are executed by the Linux build container. CRLF here makes bash fail
+# with "$'\r': command not found", so pin them explicitly.
+*.sh        text eol=lf
+_headers    text eol=lf
+_redirects  text eol=lf
+
+# Served verbatim — keep them LF too.
+*.html          text eol=lf
+*.js            text eol=lf
+*.json          text eol=lf
+*.jsonc         text eol=lf
+*.webmanifest   text eol=lf
+*.md            text eol=lf
+
+# Never touch these.
+*.png       binary
+*.pdf       binary
+*.apk       binary
+*.keystore  binary
+*.xlsx      binary
