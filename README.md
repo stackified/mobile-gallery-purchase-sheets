@@ -64,7 +64,8 @@ icons/                   launcher icons (192/512/maskable/apple/favicon)
 build.sh                 stamps the build id, run by Cloudflare on each push
 _headers                 CDN cache rules the update flow depends on
 
-MobileGallery-v1.apk     signed Android build, app bundled inside
+MobileGallery-v2.apk     signed Android build, loads from the hosted URL
+MobileGallery-v1.apk     older build with the app bundled inside (no auto-update)
 mobile-gallery-release.keystore   signing key — see warning below
 
 SETUP-HOSTING.md          hosting + auto-update setup
@@ -108,10 +109,11 @@ The consequence: **this repo must stay private.** If it is ever made public,
 generate a new key and ship a fresh install. The store password is in
 `APK-NOTES.md` for the same reason and with the same caveat.
 
-**The APK does not auto-update.** It carries its own copy of the app inside it,
-so new versions need a fresh install. `SETUP-HOSTING.md` has a three-line config
-change to point it at the hosted URL instead, which makes it auto-update at the
-cost of needing internet on first launch.
+**Two APKs, only one auto-updates.** `MobileGallery-v2.apk` loads from the
+hosted URL, so a push reaches it like it reaches the browser — it needs internet
+on its first launch, then the service worker caches it and it is offline again.
+`MobileGallery-v1.apk` has the app bundled inside and never updates; it is kept
+only as a fallback for a phone with no connectivity at setup time.
 
 ---
 
