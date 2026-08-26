@@ -1,23 +1,20 @@
 {
-  // Only needed if this is deployed as a Cloudflare *Worker* (the newer
-  // "Workers & Pages -> Workers" flow, deploy command `npx wrangler deploy`).
+  // Cloudflare Pages project config.
   //
-  // The classic Pages flow ignores this file entirely and just serves the
-  // build output directory — either path works, see SETUP-HOSTING.md.
+  // The dashboard already carries the build command and output directory; this
+  // file records them in git too, and silences the build-log warning that
+  // appears when a Wrangler config exists without `pages_build_output_dir`.
+  //
+  // Must match `build.sh`'s OUT and the dashboard's "Build output directory".
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mobile-gallery-purchase-sheets",
   "compatibility_date": "2025-01-01",
+  "pages_build_output_dir": "./_site"
 
-  // Static-assets-only Worker: no `main` script, Cloudflare just serves the
-  // files. `_headers` inside this directory is honoured, which is what keeps
-  // version.json uncached and the update flow working.
-  "assets": {
-    "directory": "./_site",
-    // The app is a single page; anything else genuinely is a 404.
-    "not_found_handling": "none"
-  },
-
-  "observability": {
-    "enabled": true
-  }
+  // If this project is ever recreated through the Workers tab instead of Pages,
+  // that flow wants a different shape — replace `pages_build_output_dir` with:
+  //
+  //   "assets": { "directory": "./_site", "not_found_handling": "none" }
+  //
+  // See SETUP-HOSTING.md.
 }
