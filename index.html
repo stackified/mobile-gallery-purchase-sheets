@@ -2649,6 +2649,17 @@ $("#btnCfg").onclick = () => {
           Short codes keep more clients on one printed page.
         </span>
       </div>
+      <div style="border-top:1px solid var(--rule);padding-top:13px;font-size:12.5px;color:var(--ink-3);line-height:1.6">
+        <b style="color:var(--ink-2);letter-spacing:.1em;font-size:10.5px;text-transform:uppercase">This device</b><br>
+        Save to folders:
+        <b style="color:${window.Capacitor?.Plugins?.Filesystem || window.showDirectoryPicker ? "var(--grn)" : "var(--verm)"}">
+          ${window.Capacitor?.Plugins?.Filesystem ? "yes, in the app"
+            : window.showDirectoryPicker ? "yes, pick a folder" : "no — Downloads only"}</b><br>
+        One-tap WhatsApp:
+        <b style="color:${window.Capacitor?.Plugins?.Share || navigator.canShare ? "var(--grn)" : "var(--verm)"}">
+          ${window.Capacitor?.Plugins?.Share ? "yes"
+            : navigator.canShare ? "yes, via share sheet" : "no — needs the newer APK"}</b>
+      </div>
       <div style="border-top:1px solid var(--rule);padding-top:14px;font-size:13px;color:var(--ink-3);line-height:1.7">
         <b style="color:var(--ink);font-family:var(--serif);font-size:14.5px">Mobile Gallery</b><br>
         Built by <b style="color:var(--ink)">Lavesh Paryani</b> · <a href="tel:9023123257" style="color:var(--grn);font-weight:700;text-decoration:none">9023123257</a><br>
@@ -3363,16 +3374,47 @@ async function shareWhatsApp(kind){
       catch(e){ if(e && e.name === "AbortError") return; }
     }
 
-    /* 3 — nothing can attach a file here. Save the PDF and open WhatsApp so
-       he can attach it, rather than silently downgrading to text. */
+    /* 3 — nothing here can attach a file. Save the PDF and say where it is.
+       A bare wa.me link is NOT a fallback: with no phone number WhatsApp
+       answers "Couldn't open this chat link", which is worse than nothing. */
     const res = await deliver(blob, kind, label, "pdf", { share:false });
-    if(res.how === "folder" || res.how === "downloaded"){
-      toast("PDF saved - attach it in WhatsApp");
-      setTimeout(() => window.open("https://wa.me/", "_blank"), 800);
+    if(res.how === "folder"){
+      shareHint(`Saved to ${res.where}`, true);
+    } else if(res.how === "downloaded"){
+      shareHint("Saved to Downloads", true);
     } else {
       reportSave(res);
     }
   }catch(e){ console.error(e); toast("Please try again"); }
+}
+
+/* Explain the manual step, and flag an out-of-date app shell, which is the
+   usual reason the native share is unavailable: the web app updates itself
+   from the server but the share plugin ships inside the APK. */
+function shareHint(where, oldShell){
+  const inApp = !!window.Capacitor;
+  dialog({
+    kicker:"Send on WhatsApp",
+    title:"PDF is ready",
+    body:`<div class="stack">
+      <div class="note" style="background:var(--grn-soft);border-left-color:var(--grn)">
+        <svg viewBox="0 0 24 24" style="stroke:var(--grn)"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><b>${esc(where)}</b></span>
+      </div>
+      <p style="color:var(--ink-2);line-height:1.7;font-size:14.5px;margin:0">
+        Open WhatsApp, pick the chat, tap <b>📎 Attach → Document</b> and choose
+        the file. It is the newest one in that folder.
+      </p>
+      ${inApp && oldShell ? `
+      <div class="note">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span>This copy of the app cannot attach files by itself. Installing the
+        latest <b>Mobile Gallery APK</b> adds one-tap WhatsApp sharing — ask
+        Lavesh for the new file.</span>
+      </div>` : ""}
+    </div>`,
+    ok:"Got it", onOk:() => {}, focus:"[data-yes]",
+  });
 }
 
 async function sharePDF(kind){
