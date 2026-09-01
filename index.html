@@ -133,6 +133,8 @@ svg{flex:none}
     var(--verm) 0 14px, transparent 14px 28px);
   opacity:.55;
 }
+/* the byline sits inside the masthead, so the tab strip needs its own edge */
+.tabs{position:relative;z-index:1}
 .mast-row{display:flex;align-items:center;gap:14px;min-height:42px}
 .wordmark{display:flex;align-items:baseline;gap:9px;min-width:0}
 .wordmark b{
@@ -182,6 +184,23 @@ svg{flex:none}
 }
 :root[data-theme="dark"] .tab[aria-selected="true"],
 @media (prefers-color-scheme:dark){}
+
+/* developer credit strip under the tabs */
+.byline{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:5px 18px 6px;
+  background:var(--grn-deep);
+  font-size:11px;color:rgba(253,251,246,.5);
+  letter-spacing:.02em;
+}
+.byline b{color:rgba(253,251,246,.82);font-weight:650}
+.byline a{
+  color:var(--verm);font-weight:750;text-decoration:none;
+  font-variant-numeric:tabular-nums;letter-spacing:.03em;
+}
+.byline a:hover{text-decoration:underline}
+:root[data-theme="dark"] .byline a{color:#e2683c}
+@media (max-width:360px){ .byline{font-size:10px;gap:6px} }
 
 /* ── Page frame ───────────────────────────────────────────── */
 .wrap{max-width:1180px;margin:0 auto}
@@ -616,16 +635,24 @@ tbody tr.focus td.nmcell,tbody tr.focus td.handle{background:var(--verm-soft)}
 tbody tr.on{background:color-mix(in srgb,var(--grn-soft) 55%,transparent)}
 tbody tr.on .it-name{color:var(--grn-deep);font-weight:700}
 .tickdot{
-  display:inline-grid;place-items:center;width:17px;height:17px;flex:none;
-  border-radius:50%;margin-right:7px;vertical-align:-3px;
+  display:grid;place-items:center;width:17px;height:17px;flex:none;
+  border-radius:50%;
   background:var(--rule);color:transparent;transition:background .16s,color .16s;
 }
 .tickdot svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
 tr.on .tickdot{background:var(--grn);color:#fff}
-/* Item names are long — let them wrap onto a second line instead of
-   running out of the cell. Only the numeric cells stay nowrap. */
-td.nmcell{white-space:normal;overflow-wrap:break-word;word-break:normal}
-td.nmcell .it-name{display:inline-block;vertical-align:middle;max-width:100%}
+/* Item names are long, so they wrap — but the tick has to stay in its own
+   fixed column or a wrapped second line slides underneath it and one-word
+   and two-word rows end up looking like different designs. Flex keeps the
+   dot and the text in separate columns for every row. */
+td.nmcell{white-space:normal}
+.nmwrap{display:flex;align-items:center;gap:0;min-width:0}
+.nmwrap .tickdot{margin-right:8px}
+.nmwrap .it-name{
+  flex:1;min-width:0;
+  overflow-wrap:break-word;word-break:normal;
+  line-height:1.25;
+}
 table.grid td.c,table.grid td.r,table.grid th{white-space:nowrap}
 
 /* clickable client column header */
@@ -737,8 +764,9 @@ input,textarea,select,td.nmcell .it-name,.psheet{
   .bar .btn{flex:1}
   .bar .btn-go{flex:1.4}
 
-  /* more of the screen goes to the grid itself */
-  .grid-wrap{max-height:none}
+  /* The wrapper must keep scrolling vertically or the sticky head has no
+     scroll container to pin against and simply scrolls away with the page. */
+  .grid-wrap{max-height:calc(100dvh - 210px);min-height:280px}
   table.grid th,table.grid td{padding:9px 7px}
   td.nmcell{max-width:none;width:150px}
   .it-name{font-size:13.5px;line-height:1.25}
@@ -933,6 +961,10 @@ input,textarea,select,td.nmcell .it-name,.psheet{
         <button class="tab" role="tab" id="tab-rate"   aria-selected="false" aria-controls="pg-rate">Price List</button>
         <button class="tab" role="tab" id="tab-master" aria-selected="false" aria-controls="pg-master">Master Data</button>
       </nav>
+    </div>
+    <div class="byline">
+      <span>Developed by <b>Lavesh Paryani</b></span>
+      <a href="tel:9023123257">9023123257</a>
     </div>
   </header>
 
@@ -1171,7 +1203,7 @@ const PDF = (() => {
      transliterated rather than emitted as mojibake. */
   const esc = s => String(s)
     .replace(/[–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
-    .replace(/·/g, "-").replace(/₹/g, "Rs.")
+    .replace(/·/g, "-").replace(/₹/g, "Rs.").replace(/…/g, "...")
     .replace(/[^\x20-\x7E]/g, "")
     .replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 
@@ -1413,10 +1445,8 @@ async function deliver(blob, kind, label, ext, { share = true } = {}){
 /* One place that turns a result into something truthful on screen. */
 function reportSave(res){
   if(res.how === "cancelled") return;
-  if(res.how === "folder")     toast(`Saved to ${res.where}`);
-  else if(res.how === "shared")     toast("Sent");
-  else if(res.how === "downloaded") toast(`Saved — ${res.filename}`);
-  else toast("Opened in a new tab — use Save from the menu");
+  const ok = res.how === "folder" || res.how === "shared" || res.how === "downloaded";
+  toast(ok ? "Saved" : "Please try again");
 }
 
 /* Offer the folder pick explicitly, since route 2 needs a gesture. */
@@ -1988,10 +2018,10 @@ function drawBuyTable(){
     const filled = rowFilled(it), tot = rowTotal(it);
     return head + `<tr class="${filled ? "on" : ""}" data-row="${it.id}" ${drag ? 'draggable="true"' : ""}>
       <td class="c handle">${drag ? `<svg viewBox="0 0 24 24" class="grip"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>` : `<span class="sr-n">${i + 1}</span>`}</td>
-      <td class="nmcell">
+      <td class="nmcell"><span class="nmwrap">
         <span class="tickdot">${TICK}</span>
         <span class="it-name">${esc(it.name)}</span>
-      </td>
+      </span></td>
       <td class="c"><select class="cell unitsel" data-unit="${it.id}" aria-label="Unit for ${esc(it.name)}">
         ${db.units.map(u => `<option ${u === it.unit ? "selected" : ""}>${esc(u)}</option>`).join("")}
       </select></td>
@@ -2967,141 +2997,167 @@ function printPurchase(){
    sheet itself and hands the file to the share sheet. Same routine
    feeds "Send on WhatsApp".
    ══════════════════════════════════════════════════════════ */
+/* Fit text into a width by trimming and adding an ellipsis, since a PDF
+   content stream has no notion of wrapping. */
+function pdfClip(str, maxW, size, bold){
+  let t = String(str);
+  if(PDF.doc().measure(t, size, bold) <= maxW) return t;
+  while(t.length > 1 && PDF.doc().measure(t + "…", size, bold) > maxW) t = t.slice(0, -1);
+  return t + "…";
+}
+
+/* Break a long line into as many lines as it takes. */
+function pdfWrap(str, maxW, size, bold){
+  const words = String(str).split(/\s+/).filter(Boolean);
+  const out = []; let line = "";
+  for(const w of words){
+    const t = line ? line + " " + w : w;
+    if(PDF.doc().measure(t, size, bold) <= maxW) line = t;
+    else { if(line) out.push(line); line = w; }
+  }
+  if(line) out.push(line);
+  return out;
+}
+
+/* Purchase sheet.
+   The whole problem with the old version was that every item went into one
+   tall column, which pushed the row pitch to its floor and the type down to
+   about 6pt — legible on screen, not on paper in a mandi at 5am. So the
+   layout is now chosen: one or two side-by-side blocks, portrait or
+   landscape, whichever yields the LARGEST type while still fitting. Two
+   blocks halve the row count, which roughly doubles the row pitch. */
 function pdfPurchase(){
-  const cols = S.buy.clients.map(findClient).filter(Boolean);
+  const cols  = S.buy.clients.map(findClient).filter(Boolean);
   const items = orderedItems().filter(rowFilled);
-  const note = S.buy.note.trim();
+  const note  = S.buy.note.trim();
+  const nC    = cols.length;
 
-  /* Portrait unless the client columns genuinely need the width. */
-  const landscape = cols.length > 6;
-  const d = PDF.doc().page(landscape);
-  const W = landscape ? PDF.A4.h : PDF.A4.w;
-  const H = landscape ? PDF.A4.w : PDF.A4.h;
-  const M = 30;
+  const M = 28, GAP = 14;
+  const HEAD = 52 + (showBrand() ? 12 : 0) + (note ? 20 : 0);
+  const FOOT = 16;
 
-  let y = M + 16;
-  d.text("Purchase List", M, y, { size:17, bold:true });
-  if(showBrand()){ y += 13; d.text(brandText(), M, y, { size:8, grey:0.4 }); }
-  d.text(niceDate(S.buy.date), W - M, M + 16, { size:12, bold:true, align:"right" });
-  d.text(`${items.length} item${items.length===1?"":"s"} · ${cols.length} client${cols.length===1?"":"s"}`,
-         W - M, M + 28, { size:7.5, grey:0.4, align:"right" });
-  y += 10;
-  d.line(M, y, W - M, y, { width:1.2 });
-  y += 14;
+  /* smallest a block can be and still hold its columns legibly */
+  const wSr = 15, wUnit = 24, wTot = 30, minQty = 21, minName = 74;
+  const minBlock = wSr + wUnit + wTot + nC * minQty + minName;
+
+  function plan(landscape, blocks){
+    const W = landscape ? PDF.A4.h : PDF.A4.w;
+    const H = landscape ? PDF.A4.w : PDF.A4.h;
+    const blockW = (W - 2*M - GAP*(blocks-1)) / blocks;
+    if(blockW < minBlock) return null;                 // columns would collide
+    const legendH = nC ? 12 * Math.max(1, pdfWrap(
+      cols.map(c => `${c.code} ${c.name}`).join("   "), W - 2*M, 7.6, false).length) : 0;
+    const avail = H - M - FOOT - (M + HEAD) - legendH;
+    const perBlock = Math.ceil(items.length / blocks) || 1;
+    const rowH = Math.min(19, (avail - 18) / (perBlock + 1));   // +1 for the head band
+    if(rowH < 8.6) return null;                                  // would be unreadable
+    return { landscape, blocks, W, H, blockW, rowH, legendH,
+             font: Math.max(6.5, Math.min(11.5, rowH * 0.60)),
+             qfont: Math.max(7,   Math.min(14,   rowH * 0.74)) };
+  }
+
+  /* Prefer more type. Portrait first at equal size — taller page, and he
+     asked for portrait by default. */
+  const want = orient() === "landscape";
+  const cands = [
+    plan(want, 2), plan(want, 1), plan(!want, 2), plan(!want, 1),
+  ].filter(Boolean);
+  /* Largest type wins. On a tie prefer ONE block and the chosen paper —
+     splitting a short list gains nothing and just leaves a lonely column. */
+  const L = cands.sort((x, y) =>
+      (y.font - x.font)
+      || (x.blocks - y.blocks)
+      || ((x.landscape === want ? 0 : 1) - (y.landscape === want ? 0 : 1))
+    )[0]
+         || { landscape:false, blocks:1, W:PDF.A4.w, H:PDF.A4.h,
+              blockW:PDF.A4.w - 2*M, rowH:8.6, legendH:12, font:6.5, qfont:7 };
+
+  const d = PDF.doc().page(L.landscape);
+  const { W, H, blockW, rowH, font, qfont, blocks } = L;
+
+  /* ---- masthead ---- */
+  let y = M + 15;
+  d.text("Purchase List", M, y, { size:16.5, bold:true });
+  if(showBrand()){ y += 12; d.text(brandText(), M, y, { size:8, grey:0.4 }); }
+  d.text(niceDate(S.buy.date), W - M, M + 15, { size:11.5, bold:true, align:"right" });
+  d.text(`${items.length} item${items.length===1?"":"s"} · ${nC} client${nC===1?"":"s"}`,
+         W - M, M + 27, { size:7.5, grey:0.42, align:"right" });
+  y += 9;
+  d.line(M, y, W - M, y, { width:1.1 });
+  y += 13;
 
   if(note){
     d.rect(M, y - 9, W - 2*M, 15, { grey:0.94 });
-    d.text("NOTE", M + 5, y, { size:7, bold:true, grey:0.4 });
-    d.text(note, M + 33, y, { size:9.5 });
-    y += 20;
+    d.text("NOTE", M + 5, y, { size:6.8, bold:true, grey:0.42 });
+    d.text(pdfClip(note, W - 2*M - 42, 9.5, false), M + 32, y, { size:9.5 });
+    y += 19;
   }
 
-  if(cols.length){
-    const key = cols.map(c => `${c.code} ${c.name}`).join("    ");
-    d.text(key, M, y, { size:7.2, grey:0.3 });
-    y += 12;
+  /* ---- code → name key, wrapped so it never runs off the page ---- */
+  if(nC){
+    pdfWrap(cols.map(c => `${c.code} ${c.name}`).join("   "), W - 2*M, 7.6, false)
+      .forEach(line => { d.text(line, M, y, { size:7.6, grey:0.3 }); y += 11; });
+    y += 2;
   }
 
-  /* Fit: shrink the row pitch until the block clears the footer. */
-  const bottom = H - M - 16;
-  const nRows = Math.max(items.length, 1);
-  let rowH = Math.min(20, Math.max(9.5, (bottom - y - 18) / nRows));
-  const fs = Math.max(6, Math.min(11.5, rowH * 0.62));
-  const fq = Math.max(6.5, Math.min(14, rowH * 0.74));
+  /* ---- column geometry inside one block ---- */
+  /* 3 digits at the largest quantity size measure ~23pt, so a 32pt cap is
+     ample and hands the rest to the item name, which was truncating. */
+  const each  = Math.max(minQty, Math.min(32, (blockW - wSr - wUnit - wTot - minName) / Math.max(nC,1)));
+  const wName = blockW - wSr - wUnit - wTot - each * nC;
 
-  const wSr = 20, wUnit = 34, wTot = 40;
-  const wCols = Math.min((W - 2*M) * 0.5, cols.length * 40);
-  const each = cols.length ? wCols / cols.length : 0;
-  const wName = (W - 2*M) - wSr - wUnit - wTot - wCols;
+  const perBlock = Math.ceil(items.length / blocks) || 1;
+  const tableTop = y;
 
-  const xSr = M, xName = xSr + wSr, xUnit = xName + wName;
-  const xCols = xUnit + wUnit, xTot = xCols + wCols;
+  for(let bi = 0; bi < blocks; bi++){
+    const x0   = M + bi * (blockW + GAP);
+    const xNm  = x0 + wSr;
+    const xUn  = xNm + wName;
+    const xQ   = xUn + wUnit;
+    const xTot = xQ + each * nC;
+    const slice = items.slice(bi * perBlock, (bi + 1) * perBlock);
+    if(!slice.length) continue;
 
-  /* header band */
-  d.rect(M, y - rowH + 3, W - 2*M, rowH, { grey:0.87 });
-  d.text("#", xSr + wSr/2, y, { size:6.8, bold:true, align:"center", grey:0.25 });
-  d.text("ITEM", xName + 3, y, { size:7.2, bold:true });
-  d.text("UNIT", xUnit + wUnit/2, y, { size:6.8, bold:true, align:"center", grey:0.25 });
-  cols.forEach((c, i) =>
-    d.text(clientLabel(c), xCols + each*i + each/2, y, { size:Math.min(10.5, fq), bold:true, align:"center" }));
-  d.text("TOT", xTot + wTot/2, y, { size:6.8, bold:true, align:"center", grey:0.25 });
-  d.line(M, y - rowH + 3, W - 2*M + M, y - rowH + 3, { width:0.9 });
-  d.line(M, y + 3, W - M, y + 3, { width:0.9 });
+    let ty = tableTop;
 
-  const colX = [xName, xUnit, xCols, ...cols.map((_, i) => xCols + each*(i+1)), xTot + wTot];
+    /* head band — dark enough to actually read, unlike the old grey-on-grey */
+    d.rect(x0, ty - rowH + 3, blockW, rowH, { grey:0.82 });
+    d.text("#",    x0 + wSr/2,  ty, { size:Math.max(6, font*0.72), bold:true, align:"center", grey:0.1 });
+    d.text("ITEM", xNm + 3,     ty, { size:Math.max(6.4, font*0.8), bold:true, grey:0 });
+    d.text("UNIT", xUn + wUnit/2, ty, { size:Math.max(6, font*0.7), bold:true, align:"center", grey:0.1 });
+    cols.forEach((c, k) =>
+      d.text(pdfClip(clientLabel(c), each - 3, Math.min(qfont, 10.5), true),
+             xQ + each*k + each/2, ty,
+             { size:Math.min(qfont, 10.5), bold:true, align:"center", grey:0 }));
+    d.text("TOT", xTot + wTot/2, ty, { size:Math.max(6, font*0.7), bold:true, align:"center", grey:0.1 });
+    d.line(x0, ty - rowH + 3, x0 + blockW, ty - rowH + 3, { width:0.8 });
+    d.line(x0, ty + 3,        x0 + blockW, ty + 3,        { width:0.8 });
 
-  let ty = y;
-  items.forEach((it, i) => {
-    ty += rowH;
-    if(ty > bottom) return;                       // fit guarantees this is rare
-    d.text(String(i+1), xSr + wSr/2, ty, { size:fs*0.72, align:"center", grey:0.45 });
-    d.text(it.name, xName + 3, ty, { size:fs, bold:true });
-    d.text(it.unit, xUnit + wUnit/2, ty, { size:fs*0.78, align:"center", grey:0.2 });
-    cols.forEach((c, k) => {
-      const v = cellVal(it.id, c.id);
-      if(hasVal(v)) d.text(String(v), xCols + each*k + each/2, ty, { size:fq, bold:true, align:"center" });
+    slice.forEach((it, i) => {
+      ty += rowH;
+      const n = bi * perBlock + i + 1;
+      d.text(String(n), x0 + wSr/2, ty, { size:font*0.7, align:"center", grey:0.45 });
+      d.text(pdfClip(it.name, wName - 5, font, true), xNm + 3, ty, { size:font, bold:true });
+      d.text(pdfClip(it.unit, wUnit - 2, font*0.76, false), xUn + wUnit/2, ty,
+             { size:font*0.76, align:"center", grey:0.22 });
+      cols.forEach((c, k) => {
+        const v = cellVal(it.id, c.id);
+        if(hasVal(v)) d.text(String(v), xQ + each*k + each/2, ty,
+                             { size:qfont, bold:true, align:"center" });
+      });
+      const t = rowTotal(it);
+      if(t) d.text(String(t), xTot + wTot/2, ty, { size:qfont, bold:true, align:"center" });
+      d.line(x0, ty + 3, x0 + blockW, ty + 3, { width:0.3, grey:0.55 });
     });
-    const t = rowTotal(it);
-    if(t) d.text(String(t), xTot + wTot/2, ty, { size:fq, bold:true, align:"center" });
-    d.line(M, ty + 3, W - M, ty + 3, { width:0.35, grey:0.55 });
-  });
 
-  /* verticals, drawn once so the grid reads as a table */
-  const top = y - rowH + 3, low = Math.min(ty + 3, bottom);
-  [M, ...colX, W - M].forEach(x => d.line(x, top, x, low, { width:0.35, grey:0.5 }));
+    /* verticals */
+    const top = tableTop - rowH + 3, low = ty + 3;
+    [x0, xNm, xUn, xQ, ...cols.map((_, k) => xQ + each*(k+1)), xTot + wTot]
+      .forEach(x => d.line(x, top, x, low, { width:0.3, grey:0.5 }));
+  }
 
   d.text(showBrand() ? brandText() : "", M, H - M + 4, { size:7, grey:0.45 });
   d.text("Purchase List", W - M, H - M + 4, { size:7, grey:0.45, align:"right" });
-  return d.blob();
-}
-
-function pdfPrice(){
-  const cust = findClient(S.rate.custId);
-  const rows = S.rate.rows.filter(r => findItem(r.itemId));
-  const d = PDF.doc().page(false);
-  const W = PDF.A4.w, H = PDF.A4.h, M = 40;
-
-  let y = M + 16;
-  d.text("Price List", M, y, { size:17, bold:true });
-  if(showBrand()){ y += 13; d.text(brandText(), M, y, { size:8, grey:0.4 }); }
-  d.text(cust ? cust.name : "—", W - M, M + 16, { size:12, bold:true, align:"right" });
-  d.text(niceDate(S.rate.date), W - M, M + 28, { size:7.5, grey:0.4, align:"right" });
-  y += 10;
-  d.line(M, y, W - M, y, { width:1.2 });
-  y += 16;
-
-  const avail = H - M - 30 - y;
-  const rowH = Math.min(22, Math.max(11, avail / Math.max(rows.length, 1)));
-  const fs = Math.max(7, Math.min(12, rowH * 0.6));
-
-  const wSr = 24, wUnit = 62, wRate = 84;
-  const wName = (W - 2*M) - wSr - wUnit - wRate;
-  const xSr = M, xName = xSr + wSr, xUnit = xName + wName, xRate = xUnit + wUnit;
-
-  d.rect(M, y - rowH + 3, W - 2*M, rowH, { grey:0.87 });
-  d.text("#", xSr + wSr/2, y, { size:7, bold:true, align:"center", grey:0.25 });
-  d.text("ITEM", xName + 4, y, { size:7.5, bold:true });
-  d.text("UNIT", xUnit + wUnit/2, y, { size:7, bold:true, align:"center", grey:0.25 });
-  d.text("RATE (Rs.)", xRate + wRate - 4, y, { size:7, bold:true, align:"right", grey:0.25 });
-  d.line(M, y + 3, W - M, y + 3, { width:0.9 });
-
-  let ty = y;
-  rows.forEach((r, i) => {
-    const it = findItem(r.itemId);
-    const rate = (r.rate !== null && r.rate !== undefined) ? r.rate : it.price;
-    ty += rowH;
-    d.text(String(i+1), xSr + wSr/2, ty, { size:fs*0.72, align:"center", grey:0.45 });
-    d.text(it.name, xName + 4, ty, { size:fs, bold:true });
-    d.text(r.unit, xUnit + wUnit/2, ty, { size:fs*0.8, align:"center", grey:0.2 });
-    if(rate != null) d.text(money(rate), xRate + wRate - 4, ty, { size:fs*1.08, bold:true, align:"right" });
-    d.line(M, ty + 3, W - M, ty + 3, { width:0.35, grey:0.55 });
-  });
-
-  [M, xName, xUnit, xRate, W - M].forEach(x =>
-    d.line(x, y - rowH + 3, x, ty + 3, { width:0.35, grey:0.5 }));
-
-  d.text(showBrand() ? brandText() : "", M, H - M + 4, { size:7, grey:0.45 });
-  d.text("Price List", W - M, H - M + 4, { size:7, grey:0.45, align:"right" });
   return d.blob();
 }
 
@@ -3167,7 +3223,7 @@ async function sharePDF(kind){
     ));
   }catch(e){
     console.error(e);
-    toast("Could not build the PDF");
+    toast("Please try again");
   }
 }
 
@@ -3269,7 +3325,7 @@ function drawBar(){
 $("#mTidy").onclick = tidyItems;
 $("#mPdfCat").onclick = async () => {
   try{ reportSave(await deliver(pdfCatalogue(), "catalogue", "Item List", "pdf")); }
-  catch(e){ console.error(e); toast("Could not build the PDF"); }
+  catch(e){ console.error(e); toast("Please try again"); }
 };
 $("#mPrintCat").onclick = () => withPrintTips(() => printOut(catalogueSheet(), "portrait"));
 
@@ -3293,8 +3349,9 @@ drawAll();
     el.classList.add("gone");
     setTimeout(() => el.remove(), 420);
   };
-  /* two frames so the first real paint is already behind it */
-  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(hide, 550)));
+  /* long enough to register as a brand moment; tap to skip */
+  el.addEventListener("click", hide, { once:true });
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(hide, 3400)));
 })();
 
 addEventListener("keydown", e => {
