@@ -518,6 +518,142 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
 .toast svg{width:16px;height:16px;stroke:var(--grn);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 @keyframes toastUp{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
 
+/* ── Splash ───────────────────────────────────────────────── */
+.splash{
+  position:fixed;inset:0;z-index:200;
+  display:grid;place-items:center;
+  background:var(--grn-deep);
+  transition:opacity .34s ease, visibility .34s ease;
+}
+.splash.gone{opacity:0;visibility:hidden;pointer-events:none}
+.splash-in{text-align:center;animation:splashUp .5s cubic-bezier(.22,1,.36,1)}
+@keyframes splashUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.splash-mark{width:78px;height:78px;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.splash-name{
+  font-family:var(--serif);font-size:26px;font-weight:600;letter-spacing:-.02em;
+  color:#fdfbf6;margin-top:18px;
+}
+.splash-sub{
+  font-size:12.5px;color:rgba(253,251,246,.55);margin-top:5px;letter-spacing:.02em;
+}
+.splash-by{
+  margin-top:34px;display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.splash-by span{
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(253,251,246,.4);
+}
+.splash-by b{
+  font-family:var(--serif);font-size:15px;font-weight:600;color:var(--verm);
+  letter-spacing:.01em;
+}
+:root[data-theme="dark"] .splash-by b,
+@media (prefers-color-scheme:dark){}
+
+/* ── Purchase grid: frozen header row + frozen item column ──
+   Two sticky axes at once, so scrolling right keeps the item name and
+   scrolling down keeps the client codes. z-index has to be layered or
+   the corner cells slide under their neighbours. */
+.grid-wrap{max-height:min(72vh,780px);overflow:auto;position:relative}
+table.grid{border-collapse:separate;border-spacing:0}
+table.grid th,table.grid td{border:none;border-bottom:1px solid var(--rule)}
+table.grid thead th{
+  position:sticky;top:0;z-index:3;
+  background:var(--paper-2);
+  box-shadow:inset 0 -1.5px 0 var(--rule-2);
+}
+table.grid th.sticky-a,table.grid td.handle{
+  position:sticky;left:0;z-index:2;background:var(--card);
+}
+table.grid th.sticky-b,table.grid td.nmcell{
+  position:sticky;left:42px;z-index:2;background:var(--card);
+  box-shadow:inset -1px 0 0 var(--rule);
+}
+table.grid thead th.sticky-a,table.grid thead th.sticky-b{z-index:4;background:var(--paper-2)}
+tbody tr.on td.nmcell,tbody tr.on td.handle{background:var(--grn-soft)}
+tbody tr.focus td.nmcell,tbody tr.focus td.handle{background:var(--verm-soft)}
+
+/* a filled row reads as done at a glance */
+tbody tr.on{background:color-mix(in srgb,var(--grn-soft) 55%,transparent)}
+tbody tr.on .it-name{color:var(--grn-deep);font-weight:700}
+.tickdot{
+  display:inline-grid;place-items:center;width:17px;height:17px;flex:none;
+  border-radius:50%;margin-right:7px;vertical-align:-3px;
+  background:var(--rule);color:transparent;transition:background .16s,color .16s;
+}
+.tickdot svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+tr.on .tickdot{background:var(--grn);color:#fff}
+td.nmcell{white-space:nowrap}
+
+/* clickable client column header */
+th.colhead{cursor:pointer;user-select:none;transition:background .15s}
+th.colhead:hover{background:var(--grn-soft)}
+th.colhead .lbl{display:block;font-size:12px;letter-spacing:.04em}
+th.colhead .n{
+  display:inline-block;margin-top:3px;padding:1px 6px;border-radius:9px;
+  background:var(--rule);color:var(--ink-2);
+  font-size:10px;font-weight:800;letter-spacing:.02em;
+}
+.sr-n{color:var(--ink-3);font-size:12px}
+
+/* category divider row */
+tr.catrow td{
+  background:var(--paper-3) !important;
+  padding:7px 13px;
+  border-bottom:1.5px solid var(--rule-2);
+}
+tr.catrow span{
+  font-family:var(--sans);font-size:10.5px;font-weight:800;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--ink-2);
+}
+tr.catrow em{
+  font-style:normal;margin-left:8px;font-size:10px;font-weight:700;
+  color:var(--ink-3);
+}
+
+/* drag to reorder */
+td.handle{cursor:grab;text-align:center}
+tr[draggable="true"]:active td.handle{cursor:grabbing}
+.grip{width:16px;height:16px;fill:var(--ink-3);stroke:none;opacity:.55}
+td.handle:hover .grip{opacity:1;fill:var(--grn)}
+tr.dragging{opacity:.4}
+tr.over td{box-shadow:inset 0 2.5px 0 var(--grn)}
+
+/* find box */
+.find{position:relative}
+.find input{height:var(--tap);padding:0 40px;width:100%;
+  background:var(--card);border:1.5px solid var(--rule-2);border-radius:var(--r-sm);color:var(--ink)}
+.find input:focus{outline:none;border-color:var(--grn);box-shadow:0 0 0 3.5px var(--grn-soft)}
+.find .mag{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  width:17px;height:17px;stroke:var(--ink-3);fill:none;stroke-width:2;pointer-events:none}
+.findx{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)}
+.findx:hover{background:var(--paper-3);color:var(--ink)}
+.findx svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+
+.onlyfilled{
+  display:inline-flex;align-items:center;gap:8px;margin-top:11px;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-size:13.5px;font-weight:500;color:var(--ink-2);
+}
+.onlyfilled input{width:17px;height:17px;flex:none;accent-color:var(--grn)}
+
+/* chip count badge */
+.chip .cnt{
+  padding:1px 7px;border-radius:9px;font-size:11px;font-weight:800;
+  background:rgba(253,251,246,.28);
+}
+.chip[aria-pressed="false"] .cnt{display:none}
+
+/* Nothing in the chrome should be text-selectable — a long-press on a
+   phone was selecting the Print label instead of firing the button. */
+button,.btn,.tab,.chip,.seg,.stamp,th,.card-head h2,.bar,.mast,.tickdot,
+tr.catrow,label,.upd,.toast{
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+}
+input,textarea,select,td.nmcell .it-name,.psheet{
+  -webkit-user-select:text;user-select:text;
+}
+
 /* ── Update banner ────────────────────────────────────────── */
 .upd{
   position:fixed;z-index:80;
@@ -683,6 +819,25 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
 </head>
 <body>
 
+<!-- Splash. Removed as soon as the first paint lands, so it is a
+     brand moment on a cold start rather than a delay. -->
+<div id="splash" class="splash">
+  <div class="splash-in">
+    <svg class="splash-mark" viewBox="0 0 100 100" aria-hidden="true">
+      <rect width="100" height="100" rx="22" fill="#204b2f"/>
+      <rect x="24" y="16" width="52" height="68" rx="5" fill="#faf7f0"/>
+      <line x1="36" y1="24" x2="36" y2="76" stroke="#bd3f14" stroke-width="2.6"/>
+      <path d="M45 36h24M45 50h24M45 64h13" stroke="#204b2f" stroke-width="6.5" stroke-linecap="round"/>
+    </svg>
+    <div class="splash-name" id="splashName">Mobile Gallery</div>
+    <div class="splash-sub">Purchase sheets for the mandi</div>
+    <div class="splash-by">
+      <span>built by</span>
+      <b>Stackified</b>
+    </div>
+  </div>
+</div>
+
 <div class="wrap-outer">
 
   <header class="mast">
@@ -700,6 +855,9 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
         </button>
         <button class="ibtn" id="btnTheme" title="Switch theme" aria-label="Switch colour theme">
           <svg viewBox="0 0 24 24" id="themeIcon"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+        </button>
+        <button class="ibtn" id="btnCfg" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.3a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.6-1H2.8a2 2 0 1 1 0-4H3a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 4.6h.1A1.7 1.7 0 0 0 10.1 3V2.8a2 2 0 1 1 4 0V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1h.3a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.6 1z"/></svg>
         </button>
         <button class="ibtn" id="btnBackup" title="Backup and restore" aria-label="Backup and restore">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -755,17 +913,35 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
       <div class="card-head">
         <h2>Items</h2>
         <span class="tag" id="buyItemTag"></span>
-      </div>
-      <div class="card-body">
-        <div class="picker">
-          <svg class="mag" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="buySearch" autocomplete="off" role="combobox"
-                 aria-expanded="false" aria-controls="buyResults" aria-autocomplete="list"
-                 placeholder="Type an item name, then press Enter">
-          <div class="results" id="buyResults" role="listbox" aria-label="Matching items"></div>
+        <div class="grow"></div>
+        <div class="seg" role="group" aria-label="Row order">
+          <button type="button" data-order="manual"   title="Your own order (drag to change)">Manual</button>
+          <button type="button" data-order="category" title="Group by category">Category</button>
+          <button type="button" data-order="name"     title="A to Z">A–Z</button>
+          <button type="button" data-order="total"    title="Highest total first">Total</button>
         </div>
+        <button class="btn btn-line btn-sm" id="buyTidy" title="Re-group into categories and renumber">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+          Tidy
+        </button>
       </div>
-      <div class="tbl" id="buyTable"></div>
+
+      <div class="card-body" style="padding-bottom:12px">
+        <div class="find">
+          <svg class="mag" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="buyFind" autocomplete="off" inputmode="search"
+                 placeholder="Find an item…" aria-label="Filter items">
+          <button class="findx" id="buyFindX" aria-label="Clear filter" hidden>
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <label class="onlyfilled">
+          <input type="checkbox" id="buyOnlyFilled">
+          <span>Show only items I have filled</span>
+        </label>
+      </div>
+
+      <div class="tbl grid-wrap" id="buyTable"></div>
     </div>
 
   </section>
@@ -833,6 +1009,10 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
         <h2>Items &amp; prices</h2>
         <span class="tag" id="mItemTag"></span>
         <div class="grow"></div>
+        <button class="btn btn-line btn-sm" id="mTidy" title="Re-group into categories">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+          Tidy
+        </button>
         <button class="btn btn-line btn-sm" id="mPrintCat">
           <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print
@@ -883,6 +1063,167 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
 "use strict";
 
 /* ══════════════════════════════════════════════════════════
+   0a · PDF WRITER  (no library — Android WebView has no
+   window.print(), so the app has to produce the file itself)
+
+   PDF is a text format. A page needs: a catalog, a pages node, a
+   page with a MediaBox, a content stream of drawing operators, and
+   font objects. Operators used here are just:
+       BT /F1 11 Tf x y Td (text) Tj ET     text
+       x y m x y l S                        line
+       r g b RG / rg                        stroke / fill colour
+       x y w h re f                         filled rectangle
+   That is enough for a table, and it embeds no fonts because
+   Helvetica is one of the 14 every reader ships with.
+   ══════════════════════════════════════════════════════════ */
+const PDF = (() => {
+  const A4 = { w: 595.28, h: 841.89 };          // points, 72/inch
+
+  /* Helvetica advance widths (units/1000) for the printable ASCII
+     range, so text can be measured and centred without a font lib. */
+  const W_REG = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+  const W_BOLD = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+
+  const widthOf = (str, size, bold) => {
+    const T = bold ? W_BOLD : W_REG;
+    let u = 0;
+    for(const ch of String(str)){
+      const c = ch.charCodeAt(0);
+      u += (c >= 32 && c <= 126) ? T[c - 32] : 556;
+    }
+    return u * size / 1000;
+  };
+
+  /* ( ) and \ are delimiters inside a PDF string literal. Anything
+     outside Latin-1 cannot be shown by a non-embedded font, so it is
+     transliterated rather than emitted as mojibake. */
+  const esc = s => String(s)
+    .replace(/[–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
+    .replace(/·/g, "-").replace(/₹/g, "Rs.")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+
+  function doc(){
+    const pages = [];
+    let cur = null;
+    const api = {
+      W: A4.w, H: A4.h,
+      page(landscape = false){
+        cur = { ops: [], w: landscape ? A4.h : A4.w, h: landscape ? A4.w : A4.h };
+        pages.push(cur);
+        return api;
+      },
+      /* y measured from the TOP for sanity; converted on the way out */
+      text(str, x, y, { size = 10, bold = false, align = "left", grey = 0 } = {}){
+        const t = esc(str);
+        if(!t) return api;
+        let dx = x;
+        if(align !== "left"){
+          const w = widthOf(t, size, bold);
+          dx = align === "center" ? x - w / 2 : x - w;
+        }
+        cur.ops.push(
+          `${grey} g BT /${bold ? "F2" : "F1"} ${size} Tf ${dx.toFixed(2)} ${(cur.h - y).toFixed(2)} Td (${t}) Tj ET 0 g`
+        );
+        return api;
+      },
+      line(x1, y1, x2, y2, { width = 0.6, grey = 0 } = {}){
+        cur.ops.push(
+          `${grey} G ${width} w ${x1.toFixed(2)} ${(cur.h - y1).toFixed(2)} m ${x2.toFixed(2)} ${(cur.h - y2).toFixed(2)} l S 0 G`
+        );
+        return api;
+      },
+      rect(x, y, w, h, { grey = 0.9 } = {}){
+        cur.ops.push(`${grey} rg ${x.toFixed(2)} ${(cur.h - y - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
+        return api;
+      },
+      measure: widthOf,
+
+      blob(){
+        const objs = [];
+        const add = s => { objs.push(s); return objs.length; };   // 1-based ids
+
+        const kidIds = [];
+        const contentIds = pages.map(p => add(null));             // reserve
+        pages.forEach((p, i) => {
+          const stream = p.ops.join("\n");
+          objs[contentIds[i] - 1] =
+            `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+        });
+
+        const pagesId = objs.length + pages.length + 1;           // provisional
+        pages.forEach((p, i) => {
+          kidIds.push(add(
+            `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${p.w.toFixed(2)} ${p.h.toFixed(2)}] ` +
+            `/Resources << /Font << /F1 ${pagesId + 2} 0 R /F2 ${pagesId + 3} 0 R >> >> ` +
+            `/Contents ${contentIds[i]} 0 R >>`
+          ));
+        });
+        const realPagesId = add(
+          `<< /Type /Pages /Kids [${kidIds.map(i => i + " 0 R").join(" ")}] /Count ${kidIds.length} >>`
+        );
+        const catalogId = add(`<< /Type /Catalog /Pages ${realPagesId} 0 R >>`);
+        add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`);
+        add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`);
+
+        /* the reserved page objects assumed pagesId; patch to the real one */
+        const fix = s => s.replace(/\/Parent \d+ 0 R/, `/Parent ${realPagesId} 0 R`)
+                          .replace(/\/F1 \d+ 0 R/, `/F1 ${realPagesId + 2} 0 R`)
+                          .replace(/\/F2 \d+ 0 R/, `/F2 ${realPagesId + 3} 0 R`);
+        kidIds.forEach(i => { objs[i - 1] = fix(objs[i - 1]); });
+
+        let out = "%PDF-1.4\n";
+        const offs = [];
+        objs.forEach((body, i) => {
+          offs.push(out.length);
+          out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+        });
+        const xref = out.length;
+        out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+        offs.forEach(o => { out += String(o).padStart(10, "0") + " 00000 n \n"; });
+        out += `trailer\n<< /Size ${objs.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+
+        /* latin1 so each char maps to one byte and /Length stays correct */
+        const bytes = new Uint8Array(out.length);
+        for(let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
+        return new Blob([bytes], { type: "application/pdf" });
+      },
+    };
+    return api;
+  }
+  return { doc, A4 };
+})();
+
+/* ══════════════════════════════════════════════════════════
+   0b · DELIVERY  — share sheet first (the only route that works
+   inside the Android WebView), then download, then a new tab.
+   ══════════════════════════════════════════════════════════ */
+async function deliver(blob, filename, title){
+  const file = new File([blob], filename, { type: blob.type });
+
+  if(navigator.canShare?.({ files: [file] })){
+    try{
+      await navigator.share({ files: [file], title });
+      return "shared";
+    }catch(e){
+      if(e && e.name === "AbortError") return "cancelled";
+    }
+  }
+
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return "downloaded";
+  }catch(e){ /* fall through */ }
+
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  return "opened";
+}
+
+/* ══════════════════════════════════════════════════════════
    0 · HELPERS  (declared first — the data layer below calls
    toast(), so these must already be initialised)
    ══════════════════════════════════════════════════════════ */
@@ -910,6 +1251,7 @@ const ICON = {
   edit: `<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`,
   trash:`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`,
   x:    `<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  share:`<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`,
   print:`<svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`,
 };
 
@@ -958,8 +1300,39 @@ const THEME_KEY = "mobile-gallery-theme";
 const BRAND_KEY = "mobile-gallery-brand";
 const ORIENT_KEY = "mobile-gallery-orient";
 
-const BRAND = "Mobile Gallery · Surat";
+const SETTINGS_KEY = "mobile-gallery-settings";
+
+const DEFAULT_SETTINGS = {
+  bizName: "Mobile Gallery",
+  bizPlace: "Surat",
+  codeStyle: "code",     // "code" | "code-name" | "name"
+};
+
+let CFG = (() => {
+  try{
+    const p = JSON.parse(store.get(SETTINGS_KEY) || "{}");
+    return { ...DEFAULT_SETTINGS, ...(p && typeof p === "object" ? p : {}) };
+  }catch(e){ return { ...DEFAULT_SETTINGS }; }
+})();
+const saveCfg = () => store.set(SETTINGS_KEY, JSON.stringify(CFG));
+
+const brandText = () =>
+  [CFG.bizName, CFG.bizPlace].filter(x => String(x || "").trim()).join(" · ");
 const showBrand = () => store.get(BRAND_KEY) !== "0";
+
+/* How a client column is labelled on screen and on paper. */
+function clientLabel(c){
+  if(!c) return "";
+  if(CFG.codeStyle === "name")      return c.name;
+  if(CFG.codeStyle === "code-name") return `${c.code} - ${c.name}`;
+  return c.code;
+}
+
+/* Categories. Order here is the order they group in. */
+const CATS = ["Vegetable", "Fruit", "Other"];
+const CAT_ALIAS = { VEG:"Vegetable", VEGETABLE:"Vegetable", FRUIT:"Fruit", OTHER:"Other" };
+const normCat = c => CAT_ALIAS[String(c || "").toUpperCase()] || (String(c || "").trim() || "Other");
+const catRank = c => { const i = CATS.indexOf(c); return i < 0 ? CATS.length : i; };
 
 const SEED_CLIENTS = [
   ["FS",  "Fountainhead School"],
@@ -996,16 +1369,37 @@ function seed(){
   const items = [];
   const add = (cat, names) => names.forEach(n => items.push({
     id: uid(), category: cat, name: n,
-    unit: PCS.has(n) ? "PCS" : (cat === "OTHER" ? "PCS" : "KG"),
+    unit: PCS.has(n) ? "PCS" : (cat === "Other" ? "PCS" : "KG"),
     price: null,
+    order: items.length,          // hand-sortable position, see sortItems()
   }));
-  add("VEG", SEED_VEG); add("FRUIT", SEED_FRUIT); add("OTHER", SEED_OTHER);
+  add("Vegetable", SEED_VEG); add("Fruit", SEED_FRUIT); add("Other", SEED_OTHER);
   return {
     clients: SEED_CLIENTS.map(([code,name]) => ({ id: uid(), code, name })),
     items,
     units: [...SEED_UNITS],
   };
 }
+
+/* Older saves used VEG/FRUIT/OTHER and had no explicit ordering. */
+function migrate(d){
+  let touched = false;
+  d.items.forEach((it, i) => {
+    const n = normCat(it.category);
+    if(n !== it.category){ it.category = n; touched = true; }
+    if(typeof it.order !== "number"){ it.order = i; touched = true; }
+  });
+  d.clients.forEach((c, i) => {
+    if(typeof c.order !== "number"){ c.order = i; touched = true; }
+  });
+  return touched;
+}
+
+/* Renumber `order` densely, so drag maths stays simple. */
+function reindex(list){ list.forEach((x, i) => { x.order = i; }); }
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
+const itemsInOrder = () => [...db.items].sort(byOrder);
+const clientsInOrder = () => [...db.clients].sort(byOrder);
 
 let db;
 (function load(){
@@ -1016,6 +1410,7 @@ let db;
       if(p && Array.isArray(p.clients) && Array.isArray(p.items)){
         db = p;
         if(!Array.isArray(db.units) || !db.units.length) db.units = [...SEED_UNITS];
+        if(migrate(db)) store.set(STORE, JSON.stringify(db));
         return;
       }
     }
@@ -1035,10 +1430,15 @@ function persist(){
 
 /* Session working state */
 const S = {
-  buy:  { date: todayISO(), note:"", clients:[], rows:[], sort:null },
+  /* qty is keyed itemId -> clientId -> number, so reordering rows or
+     reassigning a column never disturbs what was typed. */
+  buy:  { date: todayISO(), note:"", clients:[], qty:{},
+          order:"manual", find:"", onlyFilled:false },
   rate: { date: todayISO(), custId:"", rows:[] },
   filt: { q:"", cat:"" },
 };
+const freshBuy = () => ({ date: S.buy.date, note:"", clients:[], qty:{},
+                          order:S.buy.order, find:"", onlyFilled:false });
 
 /* ══════════════════════════════════════════════════════════
    2 · LOOKUPS
@@ -1254,24 +1654,47 @@ function picker({ input:inSel, results:resSel, taken, choose }){
 
 /* ══════════════════════════════════════════════════════════
    7 · PURCHASE LIST
+
+   Every master item is on screen from the start, the way the old paper
+   form was pre-printed — he fills quantities rather than adding rows.
+   The sheet that PRINTS is only the rows he actually filled, so the
+   paper stays one page.
    ══════════════════════════════════════════════════════════ */
+
+const qty = (r) => S.buy.qty[r] || (S.buy.qty[r] = {});
+const cellVal = (itemId, clientId) => (S.buy.qty[itemId] || {})[clientId];
+const hasVal = v => v !== undefined && v !== null && v !== "";
+
+const rowTotal = it =>
+  S.buy.clients.reduce((s, cid) => s + (Number(cellVal(it.id, cid)) || 0), 0);
+const rowFilled = it =>
+  S.buy.clients.some(cid => hasVal(cellVal(it.id, cid)));
+const clientCount = cid =>
+  db.items.reduce((n, it) => n + (hasVal(cellVal(it.id, cid)) ? 1 : 0), 0);
+
+/* ---------- client chips ---------- */
 function drawBuyChips(){
   const box = $("#buyChips");
-  if(!db.clients.length){
+  const list = clientsInOrder();
+  if(!list.length){
     box.innerHTML = `<p style="color:var(--ink-2)">No clients yet — add one to begin.</p>`;
   } else {
-    box.innerHTML = db.clients.map(c => {
+    box.innerHTML = list.map(c => {
       const on = S.buy.clients.includes(c.id);
+      const n = on ? clientCount(c.id) : 0;
       return `<button type="button" class="chip" aria-pressed="${on}" data-id="${c.id}">
         <span class="stamp">${esc(c.code)}</span>
         <span>${esc(c.name)}</span>
+        ${on && n ? `<span class="cnt">${n}</span>` : ""}
         <span class="tick">${TICK}</span>
       </button>`;
     }).join("");
     $$(".chip", box).forEach(ch => ch.onclick = () => {
-      const id = ch.dataset.id, L = S.buy.clients, i = L.indexOf(id);
-      if(i >= 0){ L.splice(i,1); S.buy.rows.forEach(r => delete r.qty[id]); }
-      else L.push(id);
+      const id = ch.dataset.id, sel = S.buy.clients, i = sel.indexOf(id);
+      if(i >= 0){
+        sel.splice(i, 1);
+        Object.values(S.buy.qty).forEach(row => { delete row[id]; });
+      } else sel.push(id);
       drawBuy();
     });
   }
@@ -1279,128 +1702,292 @@ function drawBuyChips(){
   $("#buyClientTag").textContent = n ? `${n} on this trip` : "tap to pick";
 }
 
-/* Sorting reorders S.buy.rows itself, so the printed sheet matches the screen. */
-const rowTotal = r => S.buy.clients.reduce((s,id) => s + (Number(r.qty[id])||0), 0);
-
-function sortBuy(key){
-  const cur = S.buy.sort;
-  const dir = (cur && cur.key === key && cur.dir === "asc") ? "desc" : "asc";
-  S.buy.sort = { key, dir };
-  const sign = dir === "asc" ? 1 : -1;
-
-  S.buy.rows.sort((a,b) => {
-    if(key === "item"){
-      const x = findItem(a.itemId)?.name || "", y = findItem(b.itemId)?.name || "";
-      return sign * x.localeCompare(y);
-    }
-    const d = rowTotal(a) - rowTotal(b);
-    if(d) return sign * d;
-    /* ties fall back to name so the order is stable and predictable */
-    return (findItem(a.itemId)?.name||"").localeCompare(findItem(b.itemId)?.name||"");
-  });
-
-  drawBuy();
-  toast(key === "item"
-    ? (dir === "asc" ? "Sorted A to Z" : "Sorted Z to A")
-    : (dir === "asc" ? "Sorted lowest total first" : "Sorted highest total first"));
+/* ---------- ordering ---------- */
+function orderedItems(){
+  const mode = S.buy.order;
+  const list = itemsInOrder();
+  if(mode === "name")     return list.sort((a,b) => a.name.localeCompare(b.name));
+  if(mode === "total")    return list.sort((a,b) => rowTotal(b) - rowTotal(a) || a.name.localeCompare(b.name));
+  if(mode === "category") return list.sort((a,b) =>
+      catRank(a.category) - catRank(b.category) ||
+      a.category.localeCompare(b.category) ||
+      (a.order ?? 0) - (b.order ?? 0));
+  return list;                                    // "manual" — his own order
 }
 
-function sortBtn(key, label){
-  const s = S.buy.sort, on = s && s.key === key;
-  const dir = on ? s.dir : null;
-  return `<button class="sortb ${on?"on":""}" data-sort="${key}"
-      aria-label="Sort by ${esc(label)}${dir?` — currently ${dir==="asc"?"ascending":"descending"}`:""}"
-      title="Sort by ${esc(label)}">
-    <svg viewBox="0 0 24 24" class="${dir||""}">
-      <path class="up"   d="M7 14l5-5 5 5"/>
-      <path class="down" d="M7 10l5 5 5-5"/>
-    </svg>
-  </button>`;
+/* Re-group into category blocks and renumber. Also where a newly added item
+   stops being stranded at the bottom. */
+function tidyItems(){
+  const sorted = [...db.items].sort((a,b) =>
+    catRank(a.category) - catRank(b.category) ||
+    a.category.localeCompare(b.category) ||
+    (a.order ?? 0) - (b.order ?? 0));
+  reindex(sorted);
+  persist();
+  S.buy.order = "manual";
+  drawBuy(); drawMasterItems();
+  toast("Grouped by category");
 }
 
+/* ---------- the grid ---------- */
 function drawBuyTable(){
   const wrap = $("#buyTable");
-  const rows = S.buy.rows, cols = S.buy.clients.map(findClient).filter(Boolean);
-  $("#buyItemTag").textContent = rows.length ? `${rows.length} line${rows.length>1?"s":""}` : "";
+  const cols = S.buy.clients.map(findClient).filter(Boolean);
+  const q = S.buy.find.trim().toLowerCase();
 
+  let rows = orderedItems();
+  if(q) rows = rows.filter(it => it.name.toLowerCase().includes(q));
+  if(S.buy.onlyFilled) rows = rows.filter(rowFilled);
+
+  const filledTotal = db.items.filter(rowFilled).length;
+  $("#buyItemTag").textContent =
+    (q || S.buy.onlyFilled) ? `${rows.length} shown · ${filledTotal} filled`
+                            : `${db.items.length} items · ${filledTotal} filled`;
+
+  $$("#pg-buy .seg [data-order]").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.order === S.buy.order)));
+  $("#buyFindX").hidden = !q;
+
+  if(!db.items.length){
+    wrap.innerHTML = `<div class="void">
+      <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <h3>No items yet</h3><p>Add items under <b>Master Data</b> and they will appear here.</p></div>`;
+    return;
+  }
+  if(!cols.length){
+    wrap.innerHTML = `<div class="void">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      <h3>Pick your clients first</h3><p>Tap the client chips above; a column appears for each one.</p></div>`;
+    return;
+  }
   if(!rows.length){
     wrap.innerHTML = `<div class="void">
-      <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h11"/></svg>
-      <h3>Nothing on the sheet yet</h3>
-      <p>Search above and press Enter to put an item on this purchase list.</p>
-    </div>`;
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <h3>Nothing matches</h3><p>Try a different word, or clear the filter.</p></div>`;
     return;
   }
 
-  wrap.innerHTML = `<table>
+  const drag = S.buy.order === "manual" && !q && !S.buy.onlyFilled;
+  let lastCat = null;
+  const body = rows.map((it, i) => {
+    let head = "";
+    if(S.buy.order === "category" && it.category !== lastCat){
+      lastCat = it.category;
+      head = `<tr class="catrow"><td colspan="${cols.length + 4}">
+        <span>${esc(it.category)}</span>
+        <em>${db.items.filter(x => x.category === it.category).length}</em>
+      </td></tr>`;
+    }
+    const filled = rowFilled(it), tot = rowTotal(it);
+    return head + `<tr class="${filled ? "on" : ""}" data-row="${it.id}" ${drag ? 'draggable="true"' : ""}>
+      <td class="c handle">${drag ? `<svg viewBox="0 0 24 24" class="grip"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>` : `<span class="sr-n">${i + 1}</span>`}</td>
+      <td class="nmcell">
+        <span class="tickdot">${TICK}</span>
+        <span class="it-name">${esc(it.name)}</span>
+      </td>
+      <td class="c"><select class="cell unitsel" data-unit="${it.id}" aria-label="Unit for ${esc(it.name)}">
+        ${db.units.map(u => `<option ${u === it.unit ? "selected" : ""}>${esc(u)}</option>`).join("")}
+      </select></td>
+      ${cols.map(c => {
+        const v = cellVal(it.id, c.id);
+        return `<td class="c"><input class="cell ${hasVal(v) ? "has" : ""}" type="number"
+          inputmode="decimal" min="0" step="any" value="${hasVal(v) ? esc(v) : ""}"
+          data-i="${it.id}" data-c="${c.id}"
+          aria-label="${esc(it.name)} for ${esc(c.name)}"></td>`;
+      }).join("")}
+      <td class="r"><span class="tot">${tot || ""}</span></td>
+    </tr>`;
+  }).join("");
+
+  wrap.innerHTML = `<table class="grid">
     <thead><tr>
-      <th class="c" style="width:38px">#</th>
-      <th><span class="th-sort">Item ${sortBtn("item","item name")}</span></th>
-      <th class="c" style="width:98px">Unit</th>
-      ${cols.map(c => `<th class="c" style="min-width:76px" title="${esc(c.name)}">${esc(c.code)}</th>`).join("")}
-      <th class="r" style="width:96px"><span class="th-sort end">Total ${sortBtn("total","total quantity")}</span></th>
-      <th style="width:44px"><span class="sr-only">Remove</span></th>
+      <th class="c sticky-a" style="width:42px">${drag ? "" : "#"}</th>
+      <th class="sticky-b">Item</th>
+      <th class="c" style="width:86px">Unit</th>
+      ${cols.map(c => `<th class="c colhead" data-col="${c.id}" title="${esc(c.name)} — tap to change">
+        <span class="lbl">${esc(clientLabel(c))}</span>
+        <span class="n">${clientCount(c.id)}</span>
+      </th>`).join("")}
+      <th class="r" style="width:76px">Total</th>
     </tr></thead>
-    <tbody>${rows.map((r,i) => {
-      const it = findItem(r.itemId);
-      if(!it) return "";
-      const tot = cols.reduce((s,c) => s + (Number(r.qty[c.id])||0), 0);
-      return `<tr>
-        <td class="c" style="color:var(--ink-3);font-size:12.5px">${i+1}</td>
-        <td class="it-name">${esc(it.name)}</td>
-        <td class="c"><select class="cell" data-u="${i}" aria-label="Unit for ${esc(it.name)}">
-          ${db.units.map(u => `<option ${u===r.unit?"selected":""}>${esc(u)}</option>`).join("")}
-        </select></td>
-        ${cols.map(c => {
-          const v = r.qty[c.id];
-          const has = v !== undefined && v !== "";
-          return `<td class="c"><input class="cell ${has?"has":""}" type="number" inputmode="decimal"
-            min="0" step="any" value="${has?esc(v):""}" data-q="${i}" data-c="${c.id}"
-            aria-label="${esc(it.name)} for ${esc(c.name)}"></td>`;
-        }).join("")}
-        <td class="r"><span class="tot">${tot||""}</span></td>
-        <td class="c"><button class="xbtn" data-del="${i}" aria-label="Remove ${esc(it.name)}">${ICON.x}</button></td>
-      </tr>`;
-    }).join("")}</tbody>
+    <tbody>${body}</tbody>
   </table>`;
 
-  const qs = $$("[data-q]", wrap);
-  qs.forEach((inp,idx) => {
+  wireGrid(wrap, cols);
+}
+
+function wireGrid(wrap, cols){
+  /* quantity cells: Enter walks DOWN the same client column so he can do
+     one client at a time, which is how the orders arrive on WhatsApp. */
+  const cells = $$("[data-i]", wrap);
+  const at = new Map();
+  cells.forEach((el, idx) => at.set(el, idx));
+  const colOf = el => el.dataset.c;
+
+  cells.forEach(inp => {
     inp.oninput = () => {
-      const r = S.buy.rows[+inp.dataset.q], v = inp.value.trim();
-      if(v === "") delete r.qty[inp.dataset.c]; else r.qty[inp.dataset.c] = Number(v);
+      const v = inp.value.trim();
+      const row = qty(inp.dataset.i);
+      if(v === "") delete row[inp.dataset.c]; else row[inp.dataset.c] = Number(v);
       inp.classList.toggle("has", v !== "");
-      const tot = S.buy.clients.reduce((s,id) => s + (Number(r.qty[id])||0), 0);
-      inp.closest("tr").querySelector(".tot").textContent = tot || "";
+      const tr = inp.closest("tr");
+      const it = findItem(inp.dataset.i);
+      tr.querySelector(".tot").textContent = rowTotal(it) || "";
+      tr.classList.toggle("on", rowFilled(it));
+      const th = wrap.querySelector(`.colhead[data-col="${inp.dataset.c}"] .n`);
+      if(th) th.textContent = clientCount(inp.dataset.c);
       drawBar();
     };
     inp.onkeydown = e => {
-      if(e.key === "Enter"){ e.preventDefault(); qs[idx+1]?.focus(); }
+      if(e.key !== "Enter" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      const dir = e.key === "ArrowUp" ? -1 : 1;
+      const col = colOf(inp);
+      const i = at.get(inp);
+      const pool = cells.filter(c => colOf(c) === col);
+      const k = pool.indexOf(inp);
+      const nx = pool[k + dir];
+      if(nx){ nx.focus(); nx.select?.(); }
     };
+    inp.onfocus = () => inp.closest("tr")?.classList.add("focus");
+    inp.onblur  = () => inp.closest("tr")?.classList.remove("focus");
   });
-  $$("[data-u]", wrap).forEach(s => s.onchange = () => { S.buy.rows[+s.dataset.u].unit = s.value; });
-  $$("[data-del]", wrap).forEach(b => b.onclick = () => { S.buy.rows.splice(+b.dataset.del,1); drawBuy(); });
-  $$("[data-sort]", wrap).forEach(b => b.onclick = () => sortBuy(b.dataset.sort));
+
+  /* unit change writes straight back to Master — one source of truth */
+  $$("[data-unit]", wrap).forEach(sel => sel.onchange = () => {
+    const it = findItem(sel.dataset.unit);
+    if(!it) return;
+    it.unit = sel.value;
+    persist();
+    drawMasterItems();
+    toast(`${it.name} is now in ${sel.value}`);
+  });
+
+  /* tap a column header to reassign that column to a different client,
+     so a mis-keyed column is a two-tap fix rather than a re-entry */
+  $$(".colhead", wrap).forEach(th => th.onclick = () => reassignColumn(th.dataset.col));
+
+  if(S.buy.order === "manual") wireDrag(wrap, "[data-row]", id => id, () => {
+    persist(); drawBuy(); drawMasterItems();
+  });
+}
+
+/* Swap which client a filled column belongs to. */
+function reassignColumn(colId){
+  const cur = findClient(colId);
+  const others = clientsInOrder();
+  dialog({
+    kicker: "Column",
+    title: `Which client is this column?`,
+    body: `<div class="stack">
+      <p style="color:var(--ink-2);line-height:1.6;font-size:14.5px">
+        Currently <b>${esc(cur ? cur.name : "—")}</b>. Changing it moves every
+        quantity already typed in this column across to the client you pick —
+        nothing is retyped.
+      </p>
+      <div class="field">
+        <label for="raCl">Client</label>
+        <select id="raCl">${others.map(c =>
+          `<option value="${c.id}" ${c.id === colId ? "selected" : ""}>${esc(c.code)} — ${esc(c.name)}</option>`
+        ).join("")}</select>
+      </div>
+    </div>`,
+    ok: "Move column",
+    onOk: box => {
+      const to = box.querySelector("#raCl").value;
+      if(to === colId) return;
+      const sel = S.buy.clients;
+      const from = sel.indexOf(colId);
+      const dup = sel.indexOf(to);
+
+      /* carry the typed numbers over to the new client id */
+      Object.values(S.buy.qty).forEach(row => {
+        if(colId in row){
+          const v = row[colId];
+          delete row[colId];
+          row[to] = v;
+        }
+      });
+      if(dup >= 0 && dup !== from) sel.splice(dup, 1);
+      const pos = sel.indexOf(colId);
+      if(pos >= 0) sel[pos] = to;
+      drawBuy();
+      toast(`Column moved to ${findClient(to)?.name || "client"}`);
+    },
+  });
+}
+
+/* ---------- shared drag-to-reorder ---------- */
+function wireDrag(root, sel, idOf, done){
+  let src = null;
+  $$(sel, root).forEach(tr => {
+    tr.addEventListener("dragstart", e => {
+      src = tr; tr.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try{ e.dataTransfer.setData("text/plain", tr.dataset.row || tr.dataset.mrow); }catch(_){}
+    });
+    tr.addEventListener("dragend", () => {
+      src?.classList.remove("dragging");
+      $$(sel, root).forEach(x => x.classList.remove("over"));
+      src = null;
+    });
+    tr.addEventListener("dragover", e => {
+      if(!src || src === tr) return;
+      e.preventDefault();
+      tr.classList.add("over");
+    });
+    tr.addEventListener("dragleave", () => tr.classList.remove("over"));
+    tr.addEventListener("drop", e => {
+      e.preventDefault();
+      tr.classList.remove("over");
+      if(!src || src === tr) return;
+      const a = src.dataset.row || src.dataset.mrow;
+      const b = tr.dataset.row || tr.dataset.mrow;
+      const list = itemsInOrder();
+      const ia = list.findIndex(x => x.id === a);
+      const ib = list.findIndex(x => x.id === b);
+      if(ia < 0 || ib < 0) return;
+      const [moved] = list.splice(ia, 1);
+      list.splice(ib, 0, moved);
+      reindex(list);
+      done();
+    });
+  });
 }
 
 const drawBuy = () => { drawBuyChips(); drawBuyTable(); drawBar(); };
 
-picker({
-  input:"#buySearch", results:"#buyResults",
-  taken: id => S.buy.rows.some(r => r.itemId === id),
-  choose: id => {
-    S.buy.rows.push({ itemId:id, unit:findItem(id).unit, qty:{} });
-    drawBuy();   /* no focus steal — the picker stays open for the next pick */
-  },
-});
-
+/* ---------- controls ---------- */
 $("#buyDate").value = S.buy.date;
 $("#buyDate").onchange = e => { S.buy.date = e.target.value; };
 $("#buyNote").oninput  = e => { S.buy.note = e.target.value; };
+
 $("#buyNewClient").onclick = () => clientDialog(null, id => {
   if(!S.buy.clients.includes(id)) S.buy.clients.push(id);
   drawBuy();
 });
+
+$("#buyFind").oninput = e => { S.buy.find = e.target.value; drawBuyTable(); };
+$("#buyFind").onkeydown = e => {
+  if(e.key === "Escape"){ e.target.value = ""; S.buy.find = ""; drawBuyTable(); }
+  if(e.key === "Enter"){
+    e.preventDefault();
+    $("#buyTable [data-i]")?.focus();
+  }
+};
+$("#buyFindX").onclick = () => {
+  $("#buyFind").value = ""; S.buy.find = ""; drawBuyTable(); $("#buyFind").focus();
+};
+$("#buyOnlyFilled").onchange = e => { S.buy.onlyFilled = e.target.checked; drawBuyTable(); };
+
+$$("#pg-buy .seg [data-order]").forEach(b => b.onclick = () => {
+  S.buy.order = b.dataset.order;
+  drawBuyTable();
+  toast({ manual:"Your own order", category:"Grouped by category",
+          name:"Sorted A to Z", total:"Highest total first" }[S.buy.order]);
+});
+$("#buyTidy").onclick = tidyItems;
+
 
 /* ══════════════════════════════════════════════════════════
    8 · PRICE LIST
@@ -1553,7 +2140,7 @@ function drawMasterClients(){
       () => {
         db.clients = db.clients.filter(x => x.id !== c.id); persist();
         S.buy.clients = S.buy.clients.filter(x => x !== c.id);
-        S.buy.rows.forEach(r => delete r.qty[c.id]);
+        Object.values(S.buy.qty).forEach(row => { delete row[c.id]; });
         if(S.rate.custId === c.id) S.rate.custId = "";
         drawAll(); toast("Client deleted");
       });
@@ -1564,7 +2151,7 @@ const cats = () => [...new Set(db.items.map(i => i.category))].sort();
 
 function itemDialog(existing){
   const it = existing || { category:"VEG", name:"", unit: db.units[0]||"KG", price:null };
-  const opts = [...new Set([...cats(),"VEG","FRUIT","OTHER"])].sort();
+  const opts = [...new Set([...CATS, ...cats()])];
   dialog({
     kicker:"Master data",
     title: existing ? "Edit item" : "Add item",
@@ -1577,8 +2164,9 @@ function itemDialog(existing){
       <div class="row" style="gap:13px">
         <div class="field grow">
           <label for="iCat">Category</label>
-          <input type="text" id="iCat" list="catlist" value="${esc(it.category)}" style="text-transform:uppercase">
-          <datalist id="catlist">${opts.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+          <select id="iCat">${opts.map(c =>
+            `<option value="${esc(c)}" ${c === it.category ? "selected" : ""}>${esc(c)}</option>`
+          ).join("")}</select>
         </div>
         <div class="field grow">
           <label for="iUnit">Default unit</label>
@@ -1598,12 +2186,20 @@ function itemDialog(existing){
       }
       const p = box.querySelector("#iPrice").value.trim();
       const patch = {
-        category: box.querySelector("#iCat").value.trim().toUpperCase() || "OTHER",
+        category: normCat(box.querySelector("#iCat").value),
         name, unit: box.querySelector("#iUnit").value,
         price: p === "" ? null : Number(p),
       };
       if(existing) Object.assign(it, patch);
-      else db.items.push({ id:uid(), ...patch });
+      else {
+        /* slot it after the last item of the same category */
+        const list = itemsInOrder();
+        const last = list.filter(x => x.category === patch.category).pop();
+        const pos  = last ? list.indexOf(last) + 1 : list.length;
+        list.splice(pos, 0, { id:uid(), ...patch, order:0 });
+        reindex(list);
+        db.items = list;
+      }
       persist(); drawAll();
       toast(existing ? "Item updated" : `${name} added`);
     },
@@ -1618,7 +2214,7 @@ function drawMasterItems(){
     cats().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   sel.value = keep;
 
-  const list = db.items.filter(i =>
+  const list = itemsInOrder().filter(i =>
     (!cat || i.category === cat) && (!q || i.name.toLowerCase().includes(q.toLowerCase())));
 
   $("#mItemTag").textContent = (q||cat) ? `${list.length} of ${db.items.length}` : `${db.items.length} on file`;
@@ -1636,14 +2232,17 @@ function drawMasterItems(){
     return;
   }
 
+  const drag = !q && !cat;      // reordering only makes sense on the full list
   wrap.innerHTML = `<table>
     <thead><tr>
-      <th style="width:80px">Cat</th><th>Item</th>
+      <th class="c" style="width:36px"></th>
+      <th style="width:104px">Category</th><th>Item</th>
       <th class="c" style="width:82px">Unit</th>
       <th class="r" style="width:100px">Price ₹</th>
       <th style="width:98px"><span class="sr-only">Actions</span></th>
     </tr></thead>
-    <tbody>${list.map(i => `<tr>
+    <tbody>${list.map(i => `<tr data-mrow="${i.id}" ${drag ? 'draggable="true"' : ""}>
+      <td class="c handle">${drag ? `<svg viewBox="0 0 24 24" class="grip"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>` : ""}</td>
       <td><span class="stamp">${esc(i.category)}</span></td>
       <td class="it-name">${esc(i.name)}</td>
       <td class="c" style="color:var(--ink-2)">${esc(i.unit)}</td>
@@ -1654,6 +2253,9 @@ function drawMasterItems(){
       </td></tr>`).join("")}</tbody>
   </table>`;
 
+  if(drag) wireDrag(wrap, "[data-mrow]", id => id, () => {
+    persist(); drawMasterItems(); drawBuyTable();
+  });
   $$("[data-e]", wrap).forEach(b => b.onclick = () => itemDialog(findItem(b.dataset.e)));
   $$("[data-d]", wrap).forEach(b => b.onclick = () => {
     const it = findItem(b.dataset.d);
@@ -1661,7 +2263,7 @@ function drawMasterItems(){
       `"${it.name}" will be removed from the catalogue and from any sheet you are building right now.`,
       () => {
         db.items = db.items.filter(x => x.id !== it.id); persist();
-        S.buy.rows  = S.buy.rows.filter(r => r.itemId !== it.id);
+        delete S.buy.qty[it.id];
         S.rate.rows = S.rate.rows.filter(r => r.itemId !== it.id);
         drawAll(); toast("Item deleted");
       });
@@ -1704,6 +2306,54 @@ $("#mNewUnit").onclick  = () => dialog({
 });
 
 /* ══════════════════════════════════════════════════════════
+   9b · SETTINGS
+   ══════════════════════════════════════════════════════════ */
+$("#btnCfg").onclick = () => {
+  dialog({
+    kicker:"Settings", title:"Shop & sheet",
+    body:`<div class="stack">
+      <div class="row" style="gap:13px">
+        <div class="field grow">
+          <label for="cfgName">Business name</label>
+          <input type="text" id="cfgName" value="${esc(CFG.bizName)}" placeholder="Mobile Gallery">
+        </div>
+        <div class="field grow">
+          <label for="cfgPlace">Place <span class="lo">— optional</span></label>
+          <input type="text" id="cfgPlace" value="${esc(CFG.bizPlace)}" placeholder="Surat">
+        </div>
+      </div>
+      <div class="field">
+        <label for="cfgCode">Client column heading</label>
+        <select id="cfgCode">
+          <option value="code"      ${CFG.codeStyle==="code"?"selected":""}>Short code only — FS</option>
+          <option value="code-name" ${CFG.codeStyle==="code-name"?"selected":""}>Short code and name — FS - Fountainhead School</option>
+          <option value="name"      ${CFG.codeStyle==="name"?"selected":""}>Full name only — Fountainhead School</option>
+        </select>
+        <span style="font-size:12.5px;color:var(--ink-3);line-height:1.5">
+          Short codes keep more clients on one printed page.
+        </span>
+      </div>
+      <div style="border-top:1px solid var(--rule);padding-top:14px;font-size:13px;color:var(--ink-3);line-height:1.7">
+        <b style="color:var(--ink);font-family:var(--serif);font-size:14.5px">Mobile Gallery</b><br>
+        Built by <b style="color:var(--ink)">Lavesh Paryani</b> · <a href="tel:9023123257" style="color:var(--grn);font-weight:700;text-decoration:none">9023123257</a><br>
+        A <b style="color:var(--verm)">Stackified</b> build.
+      </div>
+    </div>`,
+    ok:"Save",
+    onOk: box => {
+      const n = box.querySelector("#cfgName").value.trim();
+      if(!n){ toast("Business name cannot be empty"); return false; }
+      CFG.bizName   = n;
+      CFG.bizPlace  = box.querySelector("#cfgPlace").value.trim();
+      CFG.codeStyle = box.querySelector("#cfgCode").value;
+      saveCfg();
+      drawAll();
+      toast("Saved");
+    },
+  });
+};
+
+/* ══════════════════════════════════════════════════════════
    10 · BACKUP
    ══════════════════════════════════════════════════════════ */
 $("#btnBackup").onclick = () => {
@@ -1725,7 +2375,10 @@ $("#btnBackup").onclick = () => {
           Restore backup
         </button>
       </div>
-      <input type="file" id="bkFile" accept="application/json,.json" hidden>
+      <input type="file" id="bkFile" accept="*/*" hidden>
+      <button class="btn btn-line btn-sm" id="bkPaste" style="align-self:flex-start">
+        Paste backup text instead
+      </button>
       <div style="border-top:1px solid var(--rule);padding-top:15px;display:flex;gap:22px">
         ${[["clients",db.clients.length],["items",db.items.length],["units",db.units.length]]
           .map(([k,v]) => `<div>
@@ -1737,16 +2390,34 @@ $("#btnBackup").onclick = () => {
     ok:"Done", onOk:() => {}, focus:"#bkOut",
   });
 
-  $("#bkOut").onclick = () => {
-    const blob = new Blob([JSON.stringify(db,null,2)], { type:"application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement("a"),
-      { href:url, download:`mobile-gallery-backup-${todayISO()}.json` });
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1200);
-    toast("Backup file saved");
+  $("#bkOut").onclick = async () => {
+    /* <a download> is inert inside the Android WebView, which is why the
+       old export produced nothing on the phone and there was never a file
+       to restore from. deliver() tries the native share sheet first. */
+    const payload = JSON.stringify({ ...db, settings: CFG }, null, 2);
+    const blob = new Blob([payload], { type:"application/json" });
+    const how = await deliver(blob, `mobile-gallery-backup-${todayISO()}.json`, "Mobile Gallery backup");
+    toast(how === "shared" ? "Backup shared"
+        : how === "downloaded" ? "Backup saved to Downloads"
+        : "Backup opened — use Save from the menu");
   };
   $("#bkIn").onclick = () => $("#bkFile").click();
+  /* Some Android file pickers will not surface a .json at all; let him paste. */
+  $("#bkPaste").onclick = () => dialog({
+    kicker:"Restore", title:"Paste backup text",
+    body:`<div class="field">
+      <label for="bkTxt">Open the backup file, copy everything, paste it here</label>
+      <textarea id="bkTxt" style="min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:12px"
+                placeholder='{"clients":[...],"items":[...]}'></textarea>
+    </div>`,
+    ok:"Restore",
+    onOk: box => {
+      const raw = box.querySelector("#bkTxt").value.trim();
+      if(!raw){ toast("Nothing pasted"); return false; }
+      try{ applyBackup(JSON.parse(raw)); }
+      catch(e){ toast("That is not valid backup text"); return false; }
+    },
+  });
   $("#bkFile").onchange = e => {
     const f = e.target.files?.[0]; if(!f) return;
     const rd = new FileReader();
@@ -1755,25 +2426,44 @@ $("#btnBackup").onclick = () => {
         const p = JSON.parse(rd.result);
         if(!p || !Array.isArray(p.clients) || !Array.isArray(p.items))
           throw new Error("bad shape");
-        confirmish("Replace everything?",
-          `This backup holds ${p.clients.length} clients and ${p.items.length} items. It will replace all data currently on this device.`,
-          () => {
-            db = p;
-            if(!Array.isArray(db.units) || !db.units.length) db.units = [...SEED_UNITS];
-            persist();
-            S.buy  = { date:todayISO(), note:"", clients:[], rows:[] };
-            S.rate = { date:todayISO(), custId:"", rows:[] };
-            $("#buyDate").value = S.buy.date;
-            $("#rateDate").value = S.rate.date;
-            $("#buyNote").value = "";
-            drawAll(); toast("Backup restored");
-          }, "Replace");
+        applyBackupConfirm(p); return;
       }catch(err){ toast("That file is not a Mobile Gallery backup"); }
     };
     rd.readAsText(f);
     e.target.value = "";
   };
 };
+
+/* Validate, confirm, then swap the database over. */
+function applyBackup(p){
+  if(!p || !Array.isArray(p.clients) || !Array.isArray(p.items))
+    throw new Error("bad shape");
+  applyBackupConfirm(p);
+}
+
+function applyBackupConfirm(p){
+  confirmish("Replace everything?",
+    `This backup holds ${p.clients.length} clients and ${p.items.length} items. It will replace all data currently on this device.`,
+    () => {
+      if(p.settings && typeof p.settings === "object"){
+        CFG = { ...DEFAULT_SETTINGS, ...p.settings };
+        saveCfg();
+      }
+      db = { clients:p.clients, items:p.items,
+             units: Array.isArray(p.units) && p.units.length ? p.units : [...SEED_UNITS] };
+      migrate(db);
+      persist();
+      S.buy  = { date:todayISO(), note:"", clients:[], qty:{},
+                 order:"manual", find:"", onlyFilled:false };
+      S.rate = { date:todayISO(), custId:"", rows:[] };
+      $("#buyDate").value  = S.buy.date;
+      $("#rateDate").value = S.rate.date;
+      $("#buyNote").value  = "";
+      $("#buyFind").value  = "";
+      drawAll();
+      toast(`Restored ${db.clients.length} clients and ${db.items.length} items`);
+    }, "Replace");
+}
 
 /* ══════════════════════════════════════════════════════════
    11 · PRINT — scaled to exactly one A4 page
@@ -1784,9 +2474,9 @@ const PAGE = {
   landscape: { w:(297-18)*MM, h:(210-18)*MM },
 };
 
-const brandLine = () => showBrand() ? `<div class="sub">${BRAND}</div>` : "";
+const brandLine = () => showBrand() ? `<div class="sub">${esc(brandText())}</div>` : "";
 const foot = label =>
-  `<div class="pfoot"><span>${showBrand()?BRAND:""}</span><span>${esc(label)}</span></div>`;
+  `<div class="pfoot"><span>${showBrand()?esc(brandText()):""}</span><span>${esc(label)}</span></div>`;
 
 /* One purchase table. `showNames` controls whether each client column carries
    the full name under its code — dropped in two-column mode, where a legend
@@ -1817,16 +2507,15 @@ function buyTable(slice, cols, offset, showNames){
         showNames ? `<span class="who">${esc(c.name)}</span>` : ""}</th>`).join("")}
       <th class="c">Tot</th>
     </tr></thead>
-    <tbody>${slice.map((r,i) => {
-      const it = findItem(r.itemId);
-      const tot = cols.reduce((s,c) => s + (Number(r.qty[c.id])||0), 0);
+    <tbody>${slice.map((it,i) => {
+      const tot = cols.reduce((s,c) => s + (Number(cellVal(it.id,c.id))||0), 0);
       return `<tr>
         <td class="sr">${offset+i+1}</td>
         <td class="nm">${esc(it.name)}</td>
-        <td class="u">${esc(r.unit)}</td>
+        <td class="u">${esc(it.unit)}</td>
         ${cols.map(c => {
-          const v = r.qty[c.id];
-          return `<td class="q">${v!==undefined&&v!==""?v:""}</td>`;
+          const v = cellVal(it.id, c.id);
+          return `<td class="q">${hasVal(v)?v:""}</td>`;
         }).join("")}
         <td class="tt">${tot||""}</td>
       </tr>`;
@@ -1840,9 +2529,10 @@ const codeLegend = cols => !cols.length ? "" : `<div class="plegend">${
 
 /* mode: 1 = single table, 2 = split left/right so twice as many rows fit */
 function purchaseSheet(mode = 1){
-  const { date, note, clients, rows } = S.buy;
+  const { date, note, clients } = S.buy;
   const cols = clients.map(findClient).filter(Boolean);
-  const live = rows.filter(r => findItem(r.itemId));
+  /* only what he actually filled reaches the paper */
+  const live = orderedItems().filter(rowFilled);
 
   const head = `<div class="ph">
       <div><h1>Purchase List</h1>${brandLine()}</div>
@@ -2026,7 +2716,7 @@ function withPrintTips(go){
    Also peek at the other orientation and say so if it would be clearly better. */
 function printPurchase(){
   const o = orient();
-  const live = S.buy.rows.filter(r => findItem(r.itemId)).length;
+  const live = db.items.filter(rowFilled).length;
   const one = purchaseSheet(1);
 
   if(live < 8){ printOut(one, o); return; }
@@ -2048,6 +2738,168 @@ function printPurchase(){
     bits.push(`${o === "portrait" ? "landscape" : "portrait"} would read ${Math.round(other.z/here.z*100-100)}% larger`);
   }
   if(bits.length) toast(bits.join(" · "));
+}
+
+/* ══════════════════════════════════════════════════════════
+   11b · PDF SHEETS
+   The Android WebView has no window.print(), so the app draws the
+   sheet itself and hands the file to the share sheet. Same routine
+   feeds "Send on WhatsApp".
+   ══════════════════════════════════════════════════════════ */
+function pdfPurchase(){
+  const cols = S.buy.clients.map(findClient).filter(Boolean);
+  const items = orderedItems().filter(rowFilled);
+  const note = S.buy.note.trim();
+
+  /* Portrait unless the client columns genuinely need the width. */
+  const landscape = cols.length > 6;
+  const d = PDF.doc().page(landscape);
+  const W = landscape ? PDF.A4.h : PDF.A4.w;
+  const H = landscape ? PDF.A4.w : PDF.A4.h;
+  const M = 30;
+
+  let y = M + 16;
+  d.text("Purchase List", M, y, { size:17, bold:true });
+  if(showBrand()){ y += 13; d.text(brandText(), M, y, { size:8, grey:0.4 }); }
+  d.text(niceDate(S.buy.date), W - M, M + 16, { size:12, bold:true, align:"right" });
+  d.text(`${items.length} item${items.length===1?"":"s"} · ${cols.length} client${cols.length===1?"":"s"}`,
+         W - M, M + 28, { size:7.5, grey:0.4, align:"right" });
+  y += 10;
+  d.line(M, y, W - M, y, { width:1.2 });
+  y += 14;
+
+  if(note){
+    d.rect(M, y - 9, W - 2*M, 15, { grey:0.94 });
+    d.text("NOTE", M + 5, y, { size:7, bold:true, grey:0.4 });
+    d.text(note, M + 33, y, { size:9.5 });
+    y += 20;
+  }
+
+  if(cols.length){
+    const key = cols.map(c => `${c.code} ${c.name}`).join("    ");
+    d.text(key, M, y, { size:7.2, grey:0.3 });
+    y += 12;
+  }
+
+  /* Fit: shrink the row pitch until the block clears the footer. */
+  const bottom = H - M - 16;
+  const nRows = Math.max(items.length, 1);
+  let rowH = Math.min(20, Math.max(9.5, (bottom - y - 18) / nRows));
+  const fs = Math.max(6, Math.min(11.5, rowH * 0.62));
+  const fq = Math.max(6.5, Math.min(14, rowH * 0.74));
+
+  const wSr = 20, wUnit = 34, wTot = 40;
+  const wCols = Math.min((W - 2*M) * 0.5, cols.length * 40);
+  const each = cols.length ? wCols / cols.length : 0;
+  const wName = (W - 2*M) - wSr - wUnit - wTot - wCols;
+
+  const xSr = M, xName = xSr + wSr, xUnit = xName + wName;
+  const xCols = xUnit + wUnit, xTot = xCols + wCols;
+
+  /* header band */
+  d.rect(M, y - rowH + 3, W - 2*M, rowH, { grey:0.87 });
+  d.text("#", xSr + wSr/2, y, { size:6.8, bold:true, align:"center", grey:0.25 });
+  d.text("ITEM", xName + 3, y, { size:7.2, bold:true });
+  d.text("UNIT", xUnit + wUnit/2, y, { size:6.8, bold:true, align:"center", grey:0.25 });
+  cols.forEach((c, i) =>
+    d.text(clientLabel(c), xCols + each*i + each/2, y, { size:Math.min(10.5, fq), bold:true, align:"center" }));
+  d.text("TOT", xTot + wTot/2, y, { size:6.8, bold:true, align:"center", grey:0.25 });
+  d.line(M, y - rowH + 3, W - 2*M + M, y - rowH + 3, { width:0.9 });
+  d.line(M, y + 3, W - M, y + 3, { width:0.9 });
+
+  const colX = [xName, xUnit, xCols, ...cols.map((_, i) => xCols + each*(i+1)), xTot + wTot];
+
+  let ty = y;
+  items.forEach((it, i) => {
+    ty += rowH;
+    if(ty > bottom) return;                       // fit guarantees this is rare
+    d.text(String(i+1), xSr + wSr/2, ty, { size:fs*0.72, align:"center", grey:0.45 });
+    d.text(it.name, xName + 3, ty, { size:fs, bold:true });
+    d.text(it.unit, xUnit + wUnit/2, ty, { size:fs*0.78, align:"center", grey:0.2 });
+    cols.forEach((c, k) => {
+      const v = cellVal(it.id, c.id);
+      if(hasVal(v)) d.text(String(v), xCols + each*k + each/2, ty, { size:fq, bold:true, align:"center" });
+    });
+    const t = rowTotal(it);
+    if(t) d.text(String(t), xTot + wTot/2, ty, { size:fq, bold:true, align:"center" });
+    d.line(M, ty + 3, W - M, ty + 3, { width:0.35, grey:0.55 });
+  });
+
+  /* verticals, drawn once so the grid reads as a table */
+  const top = y - rowH + 3, low = Math.min(ty + 3, bottom);
+  [M, ...colX, W - M].forEach(x => d.line(x, top, x, low, { width:0.35, grey:0.5 }));
+
+  d.text(showBrand() ? brandText() : "", M, H - M + 4, { size:7, grey:0.45 });
+  d.text("Purchase List", W - M, H - M + 4, { size:7, grey:0.45, align:"right" });
+  return d.blob();
+}
+
+function pdfPrice(){
+  const cust = findClient(S.rate.custId);
+  const rows = S.rate.rows.filter(r => findItem(r.itemId));
+  const d = PDF.doc().page(false);
+  const W = PDF.A4.w, H = PDF.A4.h, M = 40;
+
+  let y = M + 16;
+  d.text("Price List", M, y, { size:17, bold:true });
+  if(showBrand()){ y += 13; d.text(brandText(), M, y, { size:8, grey:0.4 }); }
+  d.text(cust ? cust.name : "—", W - M, M + 16, { size:12, bold:true, align:"right" });
+  d.text(niceDate(S.rate.date), W - M, M + 28, { size:7.5, grey:0.4, align:"right" });
+  y += 10;
+  d.line(M, y, W - M, y, { width:1.2 });
+  y += 16;
+
+  const avail = H - M - 30 - y;
+  const rowH = Math.min(22, Math.max(11, avail / Math.max(rows.length, 1)));
+  const fs = Math.max(7, Math.min(12, rowH * 0.6));
+
+  const wSr = 24, wUnit = 62, wRate = 84;
+  const wName = (W - 2*M) - wSr - wUnit - wRate;
+  const xSr = M, xName = xSr + wSr, xUnit = xName + wName, xRate = xUnit + wUnit;
+
+  d.rect(M, y - rowH + 3, W - 2*M, rowH, { grey:0.87 });
+  d.text("#", xSr + wSr/2, y, { size:7, bold:true, align:"center", grey:0.25 });
+  d.text("ITEM", xName + 4, y, { size:7.5, bold:true });
+  d.text("UNIT", xUnit + wUnit/2, y, { size:7, bold:true, align:"center", grey:0.25 });
+  d.text("RATE (Rs.)", xRate + wRate - 4, y, { size:7, bold:true, align:"right", grey:0.25 });
+  d.line(M, y + 3, W - M, y + 3, { width:0.9 });
+
+  let ty = y;
+  rows.forEach((r, i) => {
+    const it = findItem(r.itemId);
+    const rate = (r.rate !== null && r.rate !== undefined) ? r.rate : it.price;
+    ty += rowH;
+    d.text(String(i+1), xSr + wSr/2, ty, { size:fs*0.72, align:"center", grey:0.45 });
+    d.text(it.name, xName + 4, ty, { size:fs, bold:true });
+    d.text(r.unit, xUnit + wUnit/2, ty, { size:fs*0.8, align:"center", grey:0.2 });
+    if(rate != null) d.text(money(rate), xRate + wRate - 4, ty, { size:fs*1.08, bold:true, align:"right" });
+    d.line(M, ty + 3, W - M, ty + 3, { width:0.35, grey:0.55 });
+  });
+
+  [M, xName, xUnit, xRate, W - M].forEach(x =>
+    d.line(x, y - rowH + 3, x, ty + 3, { width:0.35, grey:0.5 }));
+
+  d.text(showBrand() ? brandText() : "", M, H - M + 4, { size:7, grey:0.45 });
+  d.text("Price List", W - M, H - M + 4, { size:7, grey:0.45, align:"right" });
+  return d.blob();
+}
+
+async function sharePDF(kind){
+  const purchase = kind === "purchase";
+  if(purchase && !db.items.filter(rowFilled).length){ toast("Fill some quantities first"); return; }
+  if(!purchase && !S.rate.rows.length){ toast("Add some items first"); return; }
+  try{
+    const blob = purchase ? pdfPurchase() : pdfPrice();
+    const who = purchase ? "purchase" : "price";
+    const name = `mobile-gallery-${who}-${(purchase ? S.buy.date : S.rate.date) || "sheet"}.pdf`;
+    const how = await deliver(blob, name, purchase ? "Purchase List" : "Price List");
+    if(how === "shared")     toast("Shared");
+    else if(how === "downloaded") toast("PDF saved to Downloads");
+    else if(how === "opened")     toast("PDF opened in a new tab");
+  }catch(e){
+    console.error(e);
+    toast("Could not build the PDF");
+  }
 }
 
 function printOut(html, orient){
@@ -2114,9 +2966,9 @@ function drawBar(){
   const bar = $("#bar");
 
   if(page === "buy"){
-    const live = S.buy.rows.filter(r => findItem(r.itemId));
-    const filled = live.reduce((s,r) =>
-      s + S.buy.clients.filter(id => r.qty[id] !== undefined && r.qty[id] !== "").length, 0);
+    const live = db.items.filter(rowFilled);
+    const filled = live.reduce((s,it) =>
+      s + S.buy.clients.filter(id => hasVal(cellVal(it.id,id))).length, 0);
     const ok = S.buy.clients.length && live.length;
 
     bar.innerHTML = `
@@ -2127,21 +2979,29 @@ function drawBar(){
       </div>
       ${orientToggle()}
       <button class="btn btn-line btn-sm" id="barClear" ${live.length||S.buy.clients.length?"":"disabled"}>Clear</button>
+      <button class="btn btn-line btn-sm" id="barPdf" ${ok?"":"disabled"} title="Save or send as PDF">
+        ${ICON.share} PDF</button>
       <button class="btn btn-go" id="barPrint" ${ok?"":"disabled"}>${ICON.print} Print</button>`;
 
     wireOrient();
+    $("#barPdf").onclick = () => sharePDF("purchase");
     $("#barPrint").onclick = () => withPrintTips(printPurchase);
     $("#barClear").onclick = () => confirmish("Clear this sheet?",
       "Clients, items and quantities on the purchase sheet will be cleared. Master data is untouched.",
-      () => { S.buy = { date:S.buy.date, note:"", clients:[], rows:[] };
-              $("#buyNote").value=""; drawBuy(); toast("Sheet cleared"); }, "Clear");
+      () => { S.buy = freshBuy();
+              $("#buyNote").value=""; $("#buyFind").value="";
+              $("#buyOnlyFilled").checked=false;
+              drawBuy(); toast("Sheet cleared"); }, "Clear");
 
   } else if(page === "rate"){
     const live = S.rate.rows.filter(r => findItem(r.itemId));
     bar.innerHTML = `
       <div class="stat"><b>${live.length}</b> item${live.length===1?"":"s"} quoted</div>
       <button class="btn btn-line btn-sm" id="barClear" ${live.length?"":"disabled"}>Clear</button>
+      <button class="btn btn-line btn-sm" id="barPdf" ${live.length?"":"disabled"} title="Save or send as PDF">
+        ${ICON.share} PDF</button>
       <button class="btn btn-go" id="barPrint" ${live.length?"":"disabled"}>${ICON.print} Print</button>`;
+    $("#barPdf").onclick = () => sharePDF("price");
     $("#barPrint").onclick = () => withPrintTips(() => printOut(priceSheet(), "portrait"));
     $("#barClear").onclick = () => confirmish("Clear this quote?",
       "Items and rates on this price list will be cleared. Master data is untouched.",
@@ -2159,6 +3019,7 @@ function drawBar(){
   }
 }
 
+$("#mTidy").onclick = tidyItems;
 $("#mPrintCat").onclick = () => withPrintTips(() => printOut(catalogueSheet(), "portrait"));
 
 /* ══════════════════════════════════════════════════════════
@@ -2170,6 +3031,20 @@ function drawAll(){
   drawBar();
 }
 drawAll();
+
+/* Splash carries his own business name, then clears once painted. */
+(function splashOff(){
+  const el = $("#splash");
+  if(!el) return;
+  const nm = $("#splashName");
+  if(nm && CFG.bizName) nm.textContent = CFG.bizName;
+  const hide = () => {
+    el.classList.add("gone");
+    setTimeout(() => el.remove(), 420);
+  };
+  /* two frames so the first real paint is already behind it */
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(hide, 550)));
+})();
 
 addEventListener("keydown", e => {
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p"){
