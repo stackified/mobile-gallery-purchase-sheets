@@ -64,7 +64,8 @@ icons/                   launcher icons (192/512/maskable/apple/favicon)
 build.sh                 stamps the build id, run by Cloudflare on each push
 _headers                 CDN cache rules the update flow depends on
 
-MobileGallery-v3.apk     signed Android build; hosted URL + real folder saving
+MobileGallery-v4.apk     signed Android build; folders + native file share
+MobileGallery-v3.apk     folders, but no native share
 MobileGallery-v2.apk     hosted URL, but no folder saving
 MobileGallery-v1.apk     older build with the app bundled inside (no auto-update)
 mobile-gallery-release.keystore   signing key — see warning below

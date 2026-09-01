@@ -1197,6 +1197,7 @@ const PDF = (() => {
     let u = 0;
     for(const ch of String(str)){
       const c = ch.charCodeAt(0);
+      if(c === 0x2022 || c === 0x00b7){ u += 350; continue; }   /* WinAnsi bullet */
       u += (c >= 32 && c <= 126) ? T[c - 32] : 556;
     }
     return u * size / 1000;
@@ -1205,11 +1206,15 @@ const PDF = (() => {
   /* ( ) and \ are delimiters inside a PDF string literal. Anything
      outside Latin-1 cannot be shown by a non-embedded font, so it is
      transliterated rather than emitted as mojibake. */
+  /* A placeholder that survives the ASCII strip, swapped for the WinAnsi
+     byte at the very end so its backslash is not itself escaped. */
+  const BULLET = "\u0001";
   const esc = s => String(s)
     .replace(/[–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
-    .replace(/·/g, "-").replace(/₹/g, "Rs.").replace(/…/g, "...")
-    .replace(/[^\x20-\x7E]/g, "")
-    .replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    .replace(/[•·]/g, BULLET).replace(/₹/g, "Rs.").replace(/…/g, "...")
+    .replace(/[^\x20-\x7E\u0001]/g, "")
+    .replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
+    .replace(new RegExp(BULLET, "g"), "\\225");
 
   function doc(){
     const pages = [];
@@ -1344,6 +1349,28 @@ const blobToB64 = blob => new Promise((res, rej) => {
   r.onerror = rej;
   r.readAsDataURL(blob);
 });
+
+/* Share a real FILE from inside the APK. navigator.share exists in the
+   Android WebView but canShare({files}) is false there, which is why the
+   WhatsApp button fell through to plain text. The Capacitor Share plugin
+   takes a file URI instead, so the PDF is written first and shared by URI. */
+async function shareViaCapacitor(blob, sub, filename, title){
+  const FS = window.Capacitor?.Plugins?.Filesystem;
+  const SH = window.Capacitor?.Plugins?.Share;
+  if(!FS || !SH) return false;
+  const data = await blobToB64(blob);
+  const path = `${FOLDER_ROOT}/${sub}/${filename}`;
+  for(const directory of ["DOCUMENTS", "EXTERNAL_STORAGE", "CACHE"]){
+    try{
+      await FS.writeFile({ path, data, directory, recursive:true });
+      const got = await FS.getUri({ path, directory });
+      if(!got || !got.uri) continue;
+      await SH.share({ title, files:[got.uri] });
+      return true;
+    }catch(e){ /* try the next directory */ }
+  }
+  return false;
+}
 
 /* ---- route 1: the APK, which can make real folders ---- */
 async function saveViaCapacitor(blob, sub, filename){
@@ -2666,16 +2693,21 @@ $("#btnBackup").onclick = () => {
         </button>
       </div>
       <input type="file" id="bkFile" accept="*/*" hidden>
-      <div style="display:flex;gap:9px;flex-wrap:wrap">
-        <button class="btn btn-line btn-sm" id="bkPaste">Paste backup text instead</button>
-        <button class="btn btn-line btn-sm" id="bkFolder">Choose save folder</button>
-      </div>
+      ${window.showDirectoryPicker ? `
+      <button class="btn btn-line btn-sm" id="bkFolder" style="align-self:flex-start">
+        Choose save folder
+      </button>` : ""}
       <p style="font-size:12.5px;color:var(--ink-3);line-height:1.6;margin:0">
-        Where files land: inside the app they go to
-        <b>Documents/Mobile Gallery/</b> in their own folders. In a browser,
-        pick a folder once with <b>Choose save folder</b> and the same
-        structure is created there — otherwise files go to Downloads with the
-        date and time in the name.
+        ${window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem
+          ? `Saved to <b>Documents/Mobile Gallery/</b> — Purchase Lists, Price
+             Lists and Backups each get their own folder, and every file carries
+             the date and time.`
+          : window.showDirectoryPicker
+            ? `Pick a folder once and <b>Mobile Gallery/</b> is created inside it,
+               with a folder per sheet type. Otherwise files go to Downloads with
+               the date and time in the name.`
+            : `Files go to Downloads, with the date and time in the name — this
+               browser has no way to choose a folder.`}
       </p>
       <div style="border-top:1px solid var(--rule);padding-top:15px;display:flex;gap:22px">
         ${[["clients",db.clients.length],["items",db.items.length],["units",db.units.length]]
@@ -2697,23 +2729,8 @@ $("#btnBackup").onclick = () => {
     reportSave(await deliver(blob, "backup", "Backup", "json"));
   };
   $("#bkIn").onclick = () => $("#bkFile").click();
-  $("#bkFolder").onclick = () => chooseFolder();
+  if($("#bkFolder")) $("#bkFolder").onclick = () => chooseFolder();
   /* Some Android file pickers will not surface a .json at all; let him paste. */
-  $("#bkPaste").onclick = () => dialog({
-    kicker:"Restore", title:"Paste backup text",
-    body:`<div class="field">
-      <label for="bkTxt">Open the backup file, copy everything, paste it here</label>
-      <textarea id="bkTxt" style="min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:12px"
-                placeholder='{"clients":[...],"items":[...]}'></textarea>
-    </div>`,
-    ok:"Restore",
-    onOk: box => {
-      const raw = box.querySelector("#bkTxt").value.trim();
-      if(!raw){ toast("Nothing pasted"); return false; }
-      try{ applyBackup(JSON.parse(raw)); }
-      catch(e){ toast("That is not valid backup text"); return false; }
-    },
-  });
   $("#bkFile").onchange = e => {
     const f = e.target.files?.[0]; if(!f) return;
     const rd = new FileReader();
@@ -3102,7 +3119,7 @@ function pdfPurchase(){
 
     /* header block height, measured not guessed */
     const legendLines = nC
-      ? pdfWrap(cols.map(c => `${c.code}  ${c.name}`).join("     "), W - 2*M, 8, false).length
+      ? pdfWrap(cols.map(c => `${c.code} - ${c.name}`).join("  •  "), W - 2*M, 8, false).length
       : 0;
     const topH = 30                                  // title
                + (showBrand() ? 12 : 0)
@@ -3178,7 +3195,7 @@ function pdfPurchase(){
 
   /* ─── code → name key, wrapped, and given real clearance ─── */
   if(nC){
-    pdfWrap(cols.map(c => `${c.code}  ${c.name}`).join("     "), W - 2*M, 8, false)
+    pdfWrap(cols.map(c => `${c.code} - ${c.name}`).join("  •  "), W - 2*M, 8, false)
       .forEach(line => { d.text(line, M, y, { size:8, grey:0.32 }); y += 11; });
     y += 6;                       /* clearance so the head band cannot sit on it */
   }
@@ -3331,24 +3348,29 @@ async function shareWhatsApp(kind){
   if(!purchase && !S.rate.rows.length){ toast("Add some items first"); return; }
 
   try{
-    const blob = purchase ? pdfPurchase() : pdfPrice();
-    const name = stampName(purchase ? "Purchase List" : "Price List", "pdf");
-    const file = new File([blob], name, { type:"application/pdf" });
+    const blob  = purchase ? pdfPurchase() : pdfPrice();
+    const label = purchase ? "Purchase List" : "Price List";
+    const name  = stampName(label, "pdf");
+    const sub   = SUBFOLDER[kind] || "Files";
 
+    /* 1 — inside the app: write the PDF, then share the file itself */
+    if(await shareViaCapacitor(blob, sub, name, label)) return;
+
+    /* 2 — browsers that can attach a file to the share sheet */
+    const file = new File([blob], name, { type:"application/pdf" });
     if(navigator.canShare?.({ files:[file] })){
-      try{
-        await navigator.share({ files:[file], title:purchase ? "Purchase List" : "Price List" });
-        toast("Saved");
-        return;
-      }catch(e){ if(e && e.name === "AbortError") return; }
+      try{ await navigator.share({ files:[file], title:label }); return; }
+      catch(e){ if(e && e.name === "AbortError") return; }
     }
 
-    /* no share sheet — send the sheet as text instead */
-    if(purchase){
-      window.open("https://wa.me/?text=" + encodeURIComponent(sheetAsText()), "_blank");
-      toast("Opened WhatsApp with the list as text");
+    /* 3 — nothing can attach a file here. Save the PDF and open WhatsApp so
+       he can attach it, rather than silently downgrading to text. */
+    const res = await deliver(blob, kind, label, "pdf", { share:false });
+    if(res.how === "folder" || res.how === "downloaded"){
+      toast("PDF saved - attach it in WhatsApp");
+      setTimeout(() => window.open("https://wa.me/", "_blank"), 800);
     } else {
-      reportSave(await deliver(blob, "price", "Price List", "pdf", { share:false }));
+      reportSave(res);
     }
   }catch(e){ console.error(e); toast("Please try again"); }
 }
