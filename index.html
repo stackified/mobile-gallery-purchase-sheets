@@ -1373,16 +1373,33 @@ async function shareViaCapacitor(blob, sub, filename, title){
 }
 
 /* ---- route 1: the APK, which can make real folders ---- */
+let lastSaveError = "";
+
+/* Android 11 tightened this: a non-system app may not write into shared
+   Documents or Downloads without MediaStore, so DOCUMENTS can throw on a
+   modern phone. EXTERNAL is the app's own external directory, which always
+   works but is not browsable — it is the last resort, and the caller shares
+   the file from there instead of pretending it landed somewhere useful. */
 async function saveViaCapacitor(blob, sub, filename){
   const FS = window.Capacitor?.Plugins?.Filesystem;
   if(!FS) return null;
+  lastSaveError = "";
   const data = await blobToB64(blob);
   const path = `${FOLDER_ROOT}/${sub}/${filename}`;
-  for(const directory of ["DOCUMENTS", "EXTERNAL_STORAGE", "EXTERNAL"]){
+  const tries = [
+    ["DOCUMENTS",        `Documents/${path}`,  true],
+    ["EXTERNAL_STORAGE", `${path}`,            true],
+    ["EXTERNAL",         `${path}`,            false],   // sandbox, not browsable
+  ];
+  for(const [directory, where, browsable] of tries){
     try{
-      await FS.writeFile({ path, data, directory, recursive: true });
-      return `${directory === "DOCUMENTS" ? "Documents" : "storage"}/${path}`;
-    }catch(e){ /* try the next one */ }
+      await FS.writeFile({ path, data, directory, recursive:true });
+      let uri = "";
+      try{ uri = (await FS.getUri({ path, directory })).uri || ""; }catch(_){}
+      return { where, browsable, uri };
+    }catch(e){
+      lastSaveError = (e && (e.message || e.errorMessage)) || String(e);
+    }
   }
   return null;
 }
@@ -1437,12 +1454,14 @@ async function saveViaFileSystem(blob, sub, filename, ask){
 
 /* ---- route 3: plain download, flat, but honestly reported ---- */
 function saveViaDownload(blob, filename){
+  /* The download attribute EXISTS in the Android WebView — it simply does
+     nothing. Feature-detecting the property therefore proves nothing, which
+     is how this route came to report saves that never happened. Inside a
+     Capacitor shell it is not a route at all. */
+  if(window.Capacitor) return false;
   try{
     const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement("a"), { href:url, download:filename });
-    /* If the browser ignores the download attribute — every Android WebView
-       does — this reports it instead of claiming a save that never happened. */
-    if(typeof a.download !== "string") { URL.revokeObjectURL(url); return false; }
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     return true;
@@ -1455,7 +1474,15 @@ async function deliver(blob, kind, label, ext, { share = true } = {}){
   const sub = SUBFOLDER[kind] || "Files";
 
   const cap = await saveViaCapacitor(blob, sub, filename);
-  if(cap) return { how:"folder", where:cap, filename };
+  if(cap && cap.browsable) return { how:"folder", where:cap.where, filename, uri:cap.uri };
+  /* Written, but only into the app's private area — hand it to the share
+     sheet so it can be put somewhere he can actually reach. */
+  if(cap && cap.uri && window.Capacitor?.Plugins?.Share){
+    try{
+      await window.Capacitor.Plugins.Share.share({ title:label, files:[cap.uri] });
+      return { how:"shared", filename };
+    }catch(e){ if(e && e.name === "AbortError") return { how:"cancelled", filename }; }
+  }
 
   const fs = await saveViaFileSystem(blob, sub, filename, false);
   if(fs) return { how:"folder", where:fs, filename };
@@ -1481,7 +1508,11 @@ async function deliver(blob, kind, label, ext, { share = true } = {}){
 function reportSave(res){
   if(res.how === "cancelled") return;
   const ok = res.how === "folder" || res.how === "shared" || res.how === "downloaded";
-  toast(ok ? "Saved" : "Please try again");
+  if(ok){ toast("Saved"); return; }
+  /* A silent "please try again" left no way to tell a blocked write from a
+     bug, so the reason gets shown when there is one. */
+  toast(lastSaveError ? `Could not save — ${String(lastSaveError).slice(0, 60)}`
+                      : "Please try again");
 }
 
 /* Offer the folder pick explicitly, since route 2 needs a gesture. */
@@ -2732,12 +2763,25 @@ $("#btnBackup").onclick = () => {
   });
 
   $("#bkOut").onclick = async () => {
+    $("#bkOut").disabled = true;
     /* <a download> is inert inside the Android WebView, which is why the
        old export produced nothing on the phone and there was never a file
        to restore from. deliver() tries the native share sheet first. */
-    const payload = JSON.stringify({ ...db, settings: CFG }, null, 2);
-    const blob = new Blob([payload], { type:"application/json" });
-    reportSave(await deliver(blob, "backup", "Backup", "json"));
+    try{
+      const payload = JSON.stringify({ ...db, settings: CFG }, null, 2);
+      const blob = new Blob([payload], { type:"application/json" });
+      const res = await deliver(blob, "backup", "Backup", "json");
+      if(res.how === "folder"){
+        shareHint(`Saved to ${res.where}`, false);
+      } else {
+        reportSave(res);
+      }
+    }catch(e){
+      console.error(e);
+      toast(`Could not export — ${String(e.message || e).slice(0, 60)}`);
+    }finally{
+      if($("#bkOut")) $("#bkOut").disabled = false;
+    }
   };
   $("#bkIn").onclick = () => $("#bkFile").click();
   if($("#bkFolder")) $("#bkFolder").onclick = () => chooseFolder();
