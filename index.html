@@ -622,7 +622,11 @@ tbody tr.on .it-name{color:var(--grn-deep);font-weight:700}
 }
 .tickdot svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
 tr.on .tickdot{background:var(--grn);color:#fff}
-td.nmcell{white-space:nowrap}
+/* Item names are long — let them wrap onto a second line instead of
+   running out of the cell. Only the numeric cells stay nowrap. */
+td.nmcell{white-space:normal;overflow-wrap:break-word;word-break:normal}
+td.nmcell .it-name{display:inline-block;vertical-align:middle;max-width:100%}
+table.grid td.c,table.grid td.r,table.grid th{white-space:nowrap}
 
 /* clickable client column header */
 th.colhead{cursor:pointer;user-select:none;transition:background .15s}
@@ -736,8 +740,8 @@ input,textarea,select,td.nmcell .it-name,.psheet{
   /* more of the screen goes to the grid itself */
   .grid-wrap{max-height:none}
   table.grid th,table.grid td{padding:9px 7px}
-  td.nmcell{max-width:150px}
-  .it-name{font-size:14px}
+  td.nmcell{max-width:none;width:150px}
+  .it-name{font-size:13.5px;line-height:1.25}
   .sheet-card.ruled::before{left:22px}
   .sheet-card.ruled > .card-head,
   .sheet-card.ruled > .card-body{padding-left:34px}
@@ -1077,6 +1081,10 @@ input,textarea,select,td.nmcell .it-name,.psheet{
           <svg viewBox="0 0 24 24"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
           Tidy
         </button>
+        <button class="btn btn-line btn-sm" id="mPdfCat" title="Save or send as PDF">
+          <svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          PDF
+        </button>
         <button class="btn btn-line btn-sm" id="mPrintCat">
           <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print
@@ -1262,29 +1270,164 @@ const PDF = (() => {
    0b · DELIVERY  — share sheet first (the only route that works
    inside the Android WebView), then download, then a new tab.
    ══════════════════════════════════════════════════════════ */
-async function deliver(blob, filename, title){
-  const file = new File([blob], filename, { type: blob.type });
+/* Where files land, best available route first.
 
-  if(navigator.canShare?.({ files: [file] })){
+   A web page cannot create folders in Downloads — there is no API for it,
+   by design. Only two routes can: the Capacitor Filesystem plugin inside
+   the APK, and the File System Access API on desktop Chrome/Edge. Plain
+   browser downloads are flat, so there the date and time go in the NAME
+   instead. Every route reports what actually happened rather than
+   assuming success. */
+
+const FOLDER_ROOT = "Mobile Gallery";
+const SUBFOLDER = {
+  purchase: "Purchase Lists",
+  price:    "Price Lists",
+  backup:   "Backups",
+  catalogue:"Item Lists",
+};
+
+/* "Mobile Gallery - Purchase List - 01-Sep-2026 01-47 PM.pdf" */
+function stampName(label, ext){
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  let h = d.getHours();
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  const safe = String(CFG.bizName || "Mobile Gallery").replace(/[\\/:*?"<>|]/g, "").trim();
+  return `${safe} - ${label} - ${p(d.getDate())}-${MON[d.getMonth()]}-${d.getFullYear()}`
+       + ` ${p(h)}-${p(d.getMinutes())} ${ap}.${ext}`;
+}
+
+const blobToB64 = blob => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(",")[1] || "");
+  r.onerror = rej;
+  r.readAsDataURL(blob);
+});
+
+/* ---- route 1: the APK, which can make real folders ---- */
+async function saveViaCapacitor(blob, sub, filename){
+  const FS = window.Capacitor?.Plugins?.Filesystem;
+  if(!FS) return null;
+  const data = await blobToB64(blob);
+  const path = `${FOLDER_ROOT}/${sub}/${filename}`;
+  for(const directory of ["DOCUMENTS", "EXTERNAL_STORAGE", "EXTERNAL"]){
     try{
-      await navigator.share({ files: [file], title });
-      return "shared";
+      await FS.writeFile({ path, data, directory, recursive: true });
+      return `${directory === "DOCUMENTS" ? "Documents" : "storage"}/${path}`;
+    }catch(e){ /* try the next one */ }
+  }
+  return null;
+}
+
+/* ---- route 2: desktop, folder chosen once and remembered ---- */
+const DIRDB = "mg-dir";
+function idb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DIRDB, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("h");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dirHandle(ask){
+  if(!window.showDirectoryPicker) return null;
+  try{
+    const db = await idb();
+    const get = () => new Promise(res => {
+      const t = db.transaction("h", "readonly").objectStore("h").get("root");
+      t.onsuccess = () => res(t.result || null);
+      t.onerror = () => res(null);
+    });
+    let h = await get();
+    if(h){
+      const perm = await h.queryPermission({ mode:"readwrite" });
+      if(perm === "granted") return h;
+      if(ask && await h.requestPermission({ mode:"readwrite" }) === "granted") return h;
+      h = null;
+    }
+    if(!ask) return null;
+    h = await window.showDirectoryPicker({ mode:"readwrite", startIn:"downloads" });
+    await new Promise(res => {
+      const t = db.transaction("h", "readwrite").objectStore("h").put(h, "root");
+      t.onsuccess = t.onerror = () => res();
+    });
+    return h;
+  }catch(e){ return null; }
+}
+async function saveViaFileSystem(blob, sub, filename, ask){
+  const root = await dirHandle(ask);
+  if(!root) return null;
+  try{
+    const mg  = await root.getDirectoryHandle(FOLDER_ROOT, { create:true });
+    const dir = await mg.getDirectoryHandle(sub, { create:true });
+    const fh  = await dir.getFileHandle(filename, { create:true });
+    const w   = await fh.createWritable();
+    await w.write(blob); await w.close();
+    return `${FOLDER_ROOT}/${sub}/${filename}`;
+  }catch(e){ return null; }
+}
+
+/* ---- route 3: plain download, flat, but honestly reported ---- */
+function saveViaDownload(blob, filename){
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), { href:url, download:filename });
+    /* If the browser ignores the download attribute — every Android WebView
+       does — this reports it instead of claiming a save that never happened. */
+    if(typeof a.download !== "string") { URL.revokeObjectURL(url); return false; }
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* kind: purchase | price | backup | catalogue */
+async function deliver(blob, kind, label, ext, { share = true } = {}){
+  const filename = stampName(label, ext);
+  const sub = SUBFOLDER[kind] || "Files";
+
+  const cap = await saveViaCapacitor(blob, sub, filename);
+  if(cap) return { how:"folder", where:cap, filename };
+
+  const fs = await saveViaFileSystem(blob, sub, filename, false);
+  if(fs) return { how:"folder", where:fs, filename };
+
+  const file = new File([blob], filename, { type: blob.type });
+  if(share && navigator.canShare?.({ files:[file] })){
+    try{
+      await navigator.share({ files:[file], title:label });
+      return { how:"shared", filename };
     }catch(e){
-      if(e && e.name === "AbortError") return "cancelled";
+      if(e && e.name === "AbortError") return { how:"cancelled", filename };
     }
   }
 
-  try{
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement("a"), { href: url, download: filename });
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return "downloaded";
-  }catch(e){ /* fall through */ }
+  if(saveViaDownload(blob, filename)) return { how:"downloaded", filename };
 
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank");
-  return "opened";
+  return { how:"opened", filename };
+}
+
+/* One place that turns a result into something truthful on screen. */
+function reportSave(res){
+  if(res.how === "cancelled") return;
+  if(res.how === "folder")     toast(`Saved to ${res.where}`);
+  else if(res.how === "shared")     toast("Sent");
+  else if(res.how === "downloaded") toast(`Saved — ${res.filename}`);
+  else toast("Opened in a new tab — use Save from the menu");
+}
+
+/* Offer the folder pick explicitly, since route 2 needs a gesture. */
+async function chooseFolder(){
+  if(!window.showDirectoryPicker){
+    toast("This browser cannot pick a folder — files go to Downloads");
+    return false;
+  }
+  const h = await dirHandle(true);
+  if(h){ toast(`Folder set — ${FOLDER_ROOT}/… will be created inside it`); return true; }
+  return false;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2448,9 +2591,17 @@ $("#btnBackup").onclick = () => {
         </button>
       </div>
       <input type="file" id="bkFile" accept="*/*" hidden>
-      <button class="btn btn-line btn-sm" id="bkPaste" style="align-self:flex-start">
-        Paste backup text instead
-      </button>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-line btn-sm" id="bkPaste">Paste backup text instead</button>
+        <button class="btn btn-line btn-sm" id="bkFolder">Choose save folder</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-3);line-height:1.6;margin:0">
+        Where files land: inside the app they go to
+        <b>Documents/Mobile Gallery/</b> in their own folders. In a browser,
+        pick a folder once with <b>Choose save folder</b> and the same
+        structure is created there — otherwise files go to Downloads with the
+        date and time in the name.
+      </p>
       <div style="border-top:1px solid var(--rule);padding-top:15px;display:flex;gap:22px">
         ${[["clients",db.clients.length],["items",db.items.length],["units",db.units.length]]
           .map(([k,v]) => `<div>
@@ -2468,12 +2619,10 @@ $("#btnBackup").onclick = () => {
        to restore from. deliver() tries the native share sheet first. */
     const payload = JSON.stringify({ ...db, settings: CFG }, null, 2);
     const blob = new Blob([payload], { type:"application/json" });
-    const how = await deliver(blob, `mobile-gallery-backup-${todayISO()}.json`, "Mobile Gallery backup");
-    toast(how === "shared" ? "Backup shared"
-        : how === "downloaded" ? "Backup saved to Downloads"
-        : "Backup opened — use Save from the menu");
+    reportSave(await deliver(blob, "backup", "Backup", "json"));
   };
   $("#bkIn").onclick = () => $("#bkFile").click();
+  $("#bkFolder").onclick = () => chooseFolder();
   /* Some Android file pickers will not surface a .json at all; let him paste. */
   $("#bkPaste").onclick = () => dialog({
     kicker:"Restore", title:"Paste backup text",
@@ -2956,18 +3105,66 @@ function pdfPrice(){
   return d.blob();
 }
 
+/* Item list with prices, two columns so the whole catalogue fits a page. */
+function pdfCatalogue(){
+  const all = itemsInOrder().sort((a,b) =>
+    catRank(a.category) - catRank(b.category) || a.name.localeCompare(b.name));
+  const d = PDF.doc().page(false);
+  const W = PDF.A4.w, H = PDF.A4.h, M = 36;
+
+  let y = M + 16;
+  d.text("Item & Price List", M, y, { size:17, bold:true });
+  if(showBrand()){ y += 13; d.text(brandText(), M, y, { size:8, grey:0.4 }); }
+  d.text(niceDate(todayISO()), W - M, M + 16, { size:11, bold:true, align:"right" });
+  d.text(`${all.length} items`, W - M, M + 28, { size:7.5, grey:0.4, align:"right" });
+  y += 10;
+  d.line(M, y, W - M, y, { width:1.2 });
+  y += 15;
+
+  const gap = 16;
+  const colW = (W - 2*M - gap) / 2;
+  const half = Math.ceil(all.length / 2);
+  const bottom = H - M - 14;
+  const rowH = Math.min(16, Math.max(8.5, (bottom - y) / Math.max(half, 1)));
+  const fs = Math.max(6, Math.min(10, rowH * 0.62));
+
+  [all.slice(0, half), all.slice(half)].forEach((chunk, ci) => {
+    const x0 = M + ci * (colW + gap);
+    const xU = x0 + colW * 0.62, xP = x0 + colW;
+    let ty = y;
+    d.rect(x0, ty - rowH + 3, colW, rowH, { grey:0.87 });
+    d.text("ITEM", x0 + 3, ty, { size:6.6, bold:true });
+    d.text("UNIT", xU + 4, ty, { size:6.6, bold:true, grey:0.3 });
+    d.text("Rs.", xP - 3, ty, { size:6.6, bold:true, align:"right", grey:0.3 });
+    d.line(x0, ty + 3, x0 + colW, ty + 3, { width:0.8 });
+    chunk.forEach(it => {
+      ty += rowH;
+      if(ty > bottom) return;
+      d.text(it.name, x0 + 3, ty, { size:fs, bold:true });
+      d.text(it.unit, xU + 4, ty, { size:fs*0.82, grey:0.25 });
+      if(it.price != null) d.text(money(it.price), xP - 3, ty, { size:fs, bold:true, align:"right" });
+      d.line(x0, ty + 3, x0 + colW, ty + 3, { width:0.3, grey:0.6 });
+    });
+    [x0, xU, xP].forEach(x => d.line(x, y - rowH + 3, x, Math.min(ty + 3, bottom), { width:0.3, grey:0.5 }));
+  });
+
+  d.text(showBrand() ? brandText() : "", M, H - M + 4, { size:7, grey:0.45 });
+  d.text("Item & Price List", W - M, H - M + 4, { size:7, grey:0.45, align:"right" });
+  return d.blob();
+}
+
 async function sharePDF(kind){
   const purchase = kind === "purchase";
   if(purchase && !db.items.filter(rowFilled).length){ toast("Fill some quantities first"); return; }
   if(!purchase && !S.rate.rows.length){ toast("Add some items first"); return; }
   try{
     const blob = purchase ? pdfPurchase() : pdfPrice();
-    const who = purchase ? "purchase" : "price";
-    const name = `mobile-gallery-${who}-${(purchase ? S.buy.date : S.rate.date) || "sheet"}.pdf`;
-    const how = await deliver(blob, name, purchase ? "Purchase List" : "Price List");
-    if(how === "shared")     toast("Shared");
-    else if(how === "downloaded") toast("PDF saved to Downloads");
-    else if(how === "opened")     toast("PDF opened in a new tab");
+    reportSave(await deliver(
+      blob,
+      purchase ? "purchase" : "price",
+      purchase ? "Purchase List" : "Price List",
+      "pdf"
+    ));
   }catch(e){
     console.error(e);
     toast("Could not build the PDF");
@@ -3070,6 +3267,10 @@ function drawBar(){
 }
 
 $("#mTidy").onclick = tidyItems;
+$("#mPdfCat").onclick = async () => {
+  try{ reportSave(await deliver(pdfCatalogue(), "catalogue", "Item List", "pdf")); }
+  catch(e){ console.error(e); toast("Could not build the PDF"); }
+};
 $("#mPrintCat").onclick = () => withPrintTips(() => printOut(catalogueSheet(), "portrait"));
 
 /* ══════════════════════════════════════════════════════════
