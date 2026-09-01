@@ -64,6 +64,7 @@
   --r-sm: 7px;
   --tap: 46px;
   --bar-h: 68px;   /* 11px pad + 46px control + 11px pad */
+  --hw: 40px;      /* grid handle/serial column — sticky offset depends on it */
 
   --sh-1: 0 1px 2px rgba(28,35,51,.05), 0 2px 8px rgba(28,35,51,.045);
   --sh-2: 0 2px 6px rgba(28,35,51,.07), 0 12px 32px rgba(28,35,51,.10);
@@ -152,8 +153,11 @@ svg{flex:none}
 
 /* toggle button — filled when on, struck through when off */
 .ibtn.tgl{position:relative}
-.ibtn.tgl[aria-pressed="true"]{background:rgba(253,251,246,.2);color:#fff}
-.ibtn.tgl[aria-pressed="false"]{color:rgba(253,251,246,.45)}
+.ibtn.tgl[aria-pressed="true"]{
+  background:transparent;color:#fdfbf6;
+  box-shadow:inset 0 0 0 1.5px rgba(253,251,246,.32);
+}
+.ibtn.tgl[aria-pressed="false"]{color:rgba(253,251,246,.4)}
 .ibtn.tgl .slash{
   position:absolute;left:50%;top:50%;width:25px;height:2px;
   background:currentColor;border-radius:2px;
@@ -463,16 +467,35 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
 }
 .bar .stat .sep{opacity:.4;margin:0 5px}
 
-/* orientation segmented control */
+/* icon segmented control (paper orientation) */
 .seg{display:flex;gap:2px;padding:3px;background:var(--paper-3);border-radius:9px;flex:none}
 .seg button{
-  width:38px;height:34px;border-radius:6px;display:grid;place-items:center;
+  min-width:38px;height:34px;padding:0 4px;border-radius:6px;
+  display:grid;place-items:center;
   color:var(--ink-3);transition:background .15s, color .15s;
 }
 .seg button svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9}
 .seg button:hover{color:var(--ink)}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--grn);box-shadow:var(--sh-1)}
-@media (max-width:520px){ .seg button{width:33px} }
+
+/* TEXT segmented control (row order). Separate from .seg because labels
+   need real width — reusing the icon sizing collapsed them on top of
+   each other on a phone. Scrolls sideways rather than squashing. */
+.segt{
+  display:flex;gap:3px;padding:3px;background:var(--paper-3);
+  border-radius:10px;overflow-x:auto;scrollbar-width:none;max-width:100%;
+}
+.segt::-webkit-scrollbar{display:none}
+.segt button{
+  flex:none;height:34px;padding:0 13px;border-radius:7px;white-space:nowrap;
+  font-size:13px;font-weight:650;letter-spacing:.005em;
+  color:var(--ink-2);transition:background .15s, color .15s;
+}
+.segt button:hover{color:var(--ink)}
+.segt button[aria-pressed="true"]{
+  background:var(--card);color:var(--grn-deep);box-shadow:var(--sh-1);
+}
+:root[data-theme="dark"] .segt button[aria-pressed="true"]{color:var(--grn)}
 
 /* ── Modal ────────────────────────────────────────────────── */
 .scrim{
@@ -518,6 +541,14 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
 .toast svg{width:16px;height:16px;stroke:var(--grn);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 @keyframes toastUp{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
 
+/* row-order row: its own line so the labels have room */
+.orderbar{
+  display:flex;align-items:center;gap:10px;
+  padding:0 18px 14px;
+}
+.orderbar .segt{flex:1;min-width:0}
+.orderbar .btn{flex:none}
+
 /* ── Splash ───────────────────────────────────────────────── */
 .splash{
   position:fixed;inset:0;z-index:200;
@@ -561,14 +592,23 @@ table.grid thead th{
   background:var(--paper-2);
   box-shadow:inset 0 -1.5px 0 var(--rule-2);
 }
+/* One variable drives both the column width and the sticky offset. When
+   these disagreed by even a few px, the scrolled-under Unit column showed
+   through the gap next to the item name. */
 table.grid th.sticky-a,table.grid td.handle{
-  position:sticky;left:0;z-index:2;background:var(--card);
+  position:sticky;left:0;z-index:3;
+  width:var(--hw);min-width:var(--hw);max-width:var(--hw);
+  background:var(--card);
 }
 table.grid th.sticky-b,table.grid td.nmcell{
-  position:sticky;left:42px;z-index:2;background:var(--card);
-  box-shadow:inset -1px 0 0 var(--rule);
+  position:sticky;left:var(--hw);z-index:3;
+  background:var(--card);
+  box-shadow:1px 0 0 var(--rule);
 }
-table.grid thead th.sticky-a,table.grid thead th.sticky-b{z-index:4;background:var(--paper-2)}
+table.grid th.unitcol,table.grid td.c:has(.unitsel){width:78px}
+table.grid thead th.sticky-a,table.grid thead th.sticky-b{z-index:5;background:var(--paper-2)}
+/* Sticky cells must be OPAQUE — a translucent wash lets the columns
+   underneath bleed through as they scroll past. */
 tbody tr.on td.nmcell,tbody tr.on td.handle{background:var(--grn-soft)}
 tbody tr.focus td.nmcell,tbody tr.focus td.handle{background:var(--verm-soft)}
 
@@ -679,9 +719,25 @@ input,textarea,select,td.nmcell .it-name,.psheet{
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width:680px){
   body{font-size:15px}
-  .page{padding:15px 13px 0}
-  .card-head{padding:13px 14px}
-  .card-body{padding:14px}
+  .page{padding:12px 10px 0}
+  .card-head{padding:12px 13px}
+  .card-body{padding:13px}
+  .sheet-card{margin-bottom:13px}
+  .orderbar{padding:0 13px 12px}
+
+  /* The bar had five controls fighting one row and crushed the counts to
+     zero width. Give the numbers their own line. */
+  .bar{flex-wrap:wrap;row-gap:9px;padding:10px 13px calc(10px + env(safe-area-inset-bottom))}
+  .bar .stat{flex:1 0 100%;order:-1;font-size:12.5px}
+  .bar .stat b{font-size:15px}
+  .bar .btn{flex:1}
+  .bar .btn-go{flex:1.4}
+
+  /* more of the screen goes to the grid itself */
+  .grid-wrap{max-height:none}
+  table.grid th,table.grid td{padding:9px 7px}
+  td.nmcell{max-width:150px}
+  .it-name{font-size:14px}
   .sheet-card.ruled::before{left:22px}
   .sheet-card.ruled > .card-head,
   .sheet-card.ruled > .card-body{padding-left:34px}
@@ -691,9 +747,14 @@ input,textarea,select,td.nmcell .it-name,.psheet{
   .field.grow{min-width:100%}
   .bar .stat b{font-size:16px}
 }
+@media (max-width:680px){
+  /* wrapped bar is two rows now, so reserve for it */
+  :root{ --bar-h: 104px; }
+}
 @media (max-width:400px){
   .tab{padding:9px 13px;font-size:13.5px}
-  .btn{padding:0 14px}
+  .btn{padding:0 12px;font-size:14px}
+  .segt button{padding:0 10px;font-size:12.5px}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
@@ -914,8 +975,11 @@ input,textarea,select,td.nmcell .it-name,.psheet{
         <h2>Items</h2>
         <span class="tag" id="buyItemTag"></span>
         <div class="grow"></div>
-        <div class="seg" role="group" aria-label="Row order">
-          <button type="button" data-order="manual"   title="Your own order (drag to change)">Manual</button>
+      </div>
+
+      <div class="orderbar">
+        <div class="segt" role="group" aria-label="Row order">
+          <button type="button" data-order="manual"   title="Your own order — drag rows to change">Manual</button>
           <button type="button" data-order="category" title="Group by category">Category</button>
           <button type="button" data-order="name"     title="A to Z">A–Z</button>
           <button type="button" data-order="total"    title="Highest total first">Total</button>
@@ -1744,7 +1808,7 @@ function drawBuyTable(){
     (q || S.buy.onlyFilled) ? `${rows.length} shown · ${filledTotal} filled`
                             : `${db.items.length} items · ${filledTotal} filled`;
 
-  $$("#pg-buy .seg [data-order]").forEach(b =>
+  $$("#pg-buy .segt [data-order]").forEach(b =>
     b.setAttribute("aria-pressed", String(b.dataset.order === S.buy.order)));
   $("#buyFindX").hidden = !q;
 
@@ -1801,9 +1865,9 @@ function drawBuyTable(){
 
   wrap.innerHTML = `<table class="grid">
     <thead><tr>
-      <th class="c sticky-a" style="width:42px">${drag ? "" : "#"}</th>
+      <th class="c sticky-a">${drag ? "" : "#"}</th>
       <th class="sticky-b">Item</th>
-      <th class="c" style="width:86px">Unit</th>
+      <th class="c unitcol">Unit</th>
       ${cols.map(c => `<th class="c colhead" data-col="${c.id}" title="${esc(c.name)} — tap to change">
         <span class="lbl">${esc(clientLabel(c))}</span>
         <span class="n">${clientCount(c.id)}</span>
@@ -1980,7 +2044,7 @@ $("#buyFindX").onclick = () => {
 };
 $("#buyOnlyFilled").onchange = e => { S.buy.onlyFilled = e.target.checked; drawBuyTable(); };
 
-$$("#pg-buy .seg [data-order]").forEach(b => b.onclick = () => {
+$$("#pg-buy .segt [data-order]").forEach(b => b.onclick = () => {
   S.buy.order = b.dataset.order;
   drawBuyTable();
   toast({ manual:"Your own order", category:"Grouped by category",
@@ -2323,6 +2387,13 @@ $("#btnCfg").onclick = () => {
         </div>
       </div>
       <div class="field">
+        <label for="cfgOrient">Paper for the purchase sheet</label>
+        <select id="cfgOrient">
+          <option value="portrait"  ${orient()==="portrait"?"selected":""}>Portrait — usually larger text</option>
+          <option value="landscape" ${orient()==="landscape"?"selected":""}>Landscape — more client columns</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="cfgCode">Client column heading</label>
         <select id="cfgCode">
           <option value="code"      ${CFG.codeStyle==="code"?"selected":""}>Short code only — FS</option>
@@ -2346,6 +2417,7 @@ $("#btnCfg").onclick = () => {
       CFG.bizName   = n;
       CFG.bizPlace  = box.querySelector("#cfgPlace").value.trim();
       CFG.codeStyle = box.querySelector("#cfgCode").value;
+      store.set(ORIENT_KEY, box.querySelector("#cfgOrient").value);
       saveCfg();
       drawAll();
       toast("Saved");
@@ -2942,26 +3014,6 @@ function printOut(html, orient){
 /* Page orientation for the purchase sheet — portrait by default */
 const orient = () => store.get(ORIENT_KEY) || "portrait";
 
-function orientToggle(){
-  const o = orient();
-  return `<div class="seg" role="group" aria-label="Paper orientation">
-    <button type="button" data-o="portrait"  aria-pressed="${o==="portrait"}"  title="Portrait A4">
-      <svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1.5"/></svg>
-    </button>
-    <button type="button" data-o="landscape" aria-pressed="${o==="landscape"}" title="Landscape A4">
-      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1.5"/></svg>
-    </button>
-  </div>`;
-}
-
-function wireOrient(){
-  $$("#bar .seg [data-o]").forEach(b => b.onclick = () => {
-    store.set(ORIENT_KEY, b.dataset.o);
-    drawBar();
-    toast(b.dataset.o === "portrait" ? "Portrait A4" : "Landscape A4");
-  });
-}
-
 function drawBar(){
   const bar = $("#bar");
 
@@ -2977,13 +3029,11 @@ function drawBar(){
         <b>${S.buy.clients.length}</b> client${S.buy.clients.length===1?"":"s"}
         ${filled?`<span class="sep">·</span><b>${filled}</b> filled`:""}
       </div>
-      ${orientToggle()}
       <button class="btn btn-line btn-sm" id="barClear" ${live.length||S.buy.clients.length?"":"disabled"}>Clear</button>
       <button class="btn btn-line btn-sm" id="barPdf" ${ok?"":"disabled"} title="Save or send as PDF">
         ${ICON.share} PDF</button>
       <button class="btn btn-go" id="barPrint" ${ok?"":"disabled"}>${ICON.print} Print</button>`;
 
-    wireOrient();
     $("#barPdf").onclick = () => sharePDF("purchase");
     $("#barPrint").onclick = () => withPrintTips(printPurchase);
     $("#barClear").onclick = () => confirmish("Clear this sheet?",
