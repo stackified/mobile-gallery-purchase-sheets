@@ -2081,13 +2081,21 @@ function drawBuyTable(){
         <span class="tickdot">${TICK}</span>
         <span class="it-name">${esc(it.name)}</span>
       </span></td>
-      <td class="c"><select class="cell unitsel" data-unit="${it.id}" aria-label="Unit for ${esc(it.name)}">
+      <td class="c"><select class="cell unitsel" tabindex="-1" data-unit="${it.id}" aria-label="Unit for ${esc(it.name)}">
         ${db.units.map(u => `<option ${u === it.unit ? "selected" : ""}>${esc(u)}</option>`).join("")}
       </select></td>
-      ${cols.map(c => {
+      ${cols.map((c, ci) => {
         const v = cellVal(it.id, c.id);
+        /* Numbered DOWN each column, not across each row. The grid is laid
+           out row by row, so the browser's own Tab order runs sideways to the
+           next client and then into the unit dropdown. Intercepting the key
+           is not enough — Android's number pad sends its arrow in a form the
+           WebView does not report as Tab, so the keydown handler never sees
+           it. An explicit column-major tabindex makes the NATIVE order right,
+           which needs no key detection at all. */
         return `<td class="c"><input class="cell ${hasVal(v) ? "has" : ""}" type="number"
           inputmode="decimal" min="0" step="any" value="${hasVal(v) ? esc(v) : ""}"
+          tabindex="${ci * rows.length + i + 1}"
           data-i="${it.id}" data-c="${c.id}"
           aria-label="${esc(it.name)} for ${esc(c.name)}"></td>`;
       }).join("")}
@@ -2140,8 +2148,9 @@ function wireGrid(wrap, cols){
          Left alone Tab follows DOM order, which runs ACROSS the row to the
          next client, and that is what he was seeing. Tab is redirected down
          the column like Enter, since orders arrive one client at a time. */
-      const fwd  = e.key === "Enter" || e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey);
-      const back = e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey);
+      const tab  = e.key === "Tab" || e.keyCode === 9 || e.which === 9;
+      const fwd  = e.key === "Enter" || e.key === "ArrowDown" || (tab && !e.shiftKey);
+      const back = e.key === "ArrowUp" || (tab && e.shiftKey);
       if(!fwd && !back) return;
       e.preventDefault();
 
