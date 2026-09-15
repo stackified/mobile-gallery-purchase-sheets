@@ -572,6 +572,45 @@ select.cell{font-weight:600;font-size:13.5px;padding:0 4px}
 .orderbar .segt{flex:1;min-width:0}
 .orderbar .btn{flex:none}
 
+/* One sheet, one page box. The SVG is already A4 in points, so it maps 1:1
+   onto the paper with no scaling step. */
+.ppage{width:100%}
+.ppage + .ppage{break-before:page;page-break-before:always}
+.ppage svg{display:block;width:100%;height:auto}
+
+/* Preview — the same drawing, on screen */
+.pvw{
+  position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;
+  background:var(--paper-2);
+}
+.pvw-head{
+  display:flex;align-items:center;gap:11px;padding:11px 14px;
+  background:var(--grn-deep);color:#fdfbf6;flex:none;
+  padding-top:calc(11px + env(safe-area-inset-top));
+}
+.pvw-ttl{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.pvw-ttl b{font-size:15.5px;letter-spacing:.01em}
+.pvw-ttl span{font-size:11.5px;color:rgba(253,251,246,.62)}
+.pvw-body{
+  flex:1;overflow:auto;padding:16px;
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+  -webkit-overflow-scrolling:touch;
+}
+.pvw-body .psvg{
+  width:100%;max-width:800px;height:auto;flex:none;
+  background:#fff;border:1px solid var(--rule);box-shadow:var(--sh-2);
+}
+.pvw-foot{
+  flex:none;display:flex;gap:9px;padding:11px 14px;
+  padding-bottom:calc(11px + env(safe-area-inset-bottom));
+  background:var(--card);border-top:1px solid var(--rule);
+}
+.pvw-foot .btn{flex:1}
+@media (max-width:420px){
+  .pvw-body{padding:11px}
+  .pvw-foot .btn{padding:0 10px;font-size:13.5px}
+}
+
 /* ── Splash ───────────────────────────────────────────────── */
 .splash{
   position:fixed;inset:0;z-index:200;
@@ -725,7 +764,7 @@ tr.catrow,label,.upd,.toast{
   -webkit-user-select:none;user-select:none;
   -webkit-touch-callout:none;
 }
-input,textarea,select,td.nmcell .it-name,.psheet{
+input,textarea,select,td.nmcell .it-name{
   -webkit-user-select:text;user-select:text;
 }
 
@@ -765,8 +804,11 @@ input,textarea,select,td.nmcell .it-name,.psheet{
   .bar{flex-wrap:wrap;row-gap:9px;padding:10px 13px calc(10px + env(safe-area-inset-bottom))}
   .bar .stat{flex:1 0 100%;order:-1;font-size:12.5px}
   .bar .stat b{font-size:15px}
-  .bar .btn{flex:1}
-  .bar .btn-go{flex:1.4}
+  /* Five controls will not read on a phone in one row. Three secondary
+     actions share a row, then the two that send the sheet somewhere get a
+     half each — every label stays legible instead of being shrunk away. */
+  .bar .btn{flex:1 1 calc(33.333% - 13px);min-width:0}
+  .bar .btn-wa,.bar .btn-go{flex:1 1 calc(50% - 13px)}
 
   /* The wrapper must keep scrolling vertically or the sticky head has no
      scroll container to pin against and simply scrolls away with the page. */
@@ -784,8 +826,8 @@ input,textarea,select,td.nmcell .it-name,.psheet{
   .bar .stat b{font-size:16px}
 }
 @media (max-width:680px){
-  /* wrapped bar is two rows now, so reserve for it */
-  :root{ --bar-h: 104px; }
+  /* counts, then three buttons, then two — reserve for all three rows */
+  :root{ --bar-h: 148px; }
 }
 @media (max-width:400px){
   .tab{padding:9px 13px;font-size:13.5px}
@@ -801,116 +843,14 @@ input,textarea,select,td.nmcell .it-name,.psheet{
    ══════════════════════════════════════════════════════════ */
 #printRoot{display:none}
 
-.psheet{
-  font-family:var(--serif);
-  color:#000;background:#fff;
-}
-.ph{
-  display:flex;align-items:flex-end;gap:18px;
-  border-bottom:1.6pt solid #000;padding-bottom:6pt;margin-bottom:9pt;
-}
-.ph h1{font-family:var(--serif);font-size:18pt;font-weight:600;letter-spacing:-.02em;line-height:1}
-.ph .sub{
-  font-family:var(--sans);font-size:7.5pt;font-weight:700;
-  letter-spacing:.2em;text-transform:uppercase;color:#444;margin-top:3pt;
-}
-.ph .meta{margin-left:auto;text-align:right;font-family:var(--sans);font-size:9pt;line-height:1.55}
-.ph .meta b{font-family:var(--serif);font-size:12pt;font-weight:600}
-.ph .meta .fine{font-size:7.5pt;color:#555;letter-spacing:.05em;text-transform:uppercase;font-weight:700}
-
-/* ── Print type scale ──────────────────────────────────────
-   BIG, in priority order: quantity · total · item name · client code.
-   SMALL: client full name, unit, serial, everything else.        */
-.psheet table{
-  width:100%;
-  border-collapse:collapse;
-  table-layout:fixed;            /* keeps every column edge aligned */
-  font-family:var(--sans);
-  font-size:12pt;
-}
-.psheet th,.psheet td{
-  border:.75pt solid #000;
-  padding:4pt 3pt;
-  vertical-align:middle;
-  /* default: do NOT break inside a word — only the item name opts in below.
-     Without this, `word-break:break-word` splits 145 into 1/4/5 down the cell. */
-  white-space:nowrap;
-  word-break:normal;
-  overflow-wrap:normal;
-}
-/* the one column allowed to wrap — item names are long, numbers never are */
-.psheet td.nm,.psheet th:nth-child(2){
-  white-space:normal;
-  overflow-wrap:break-word;
-  word-break:normal;
-}
-.psheet thead th{
-  background:#e8e8e8 !important;
-  font-size:8pt;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-  text-align:center;line-height:1.2;
-  -webkit-print-color-adjust:exact;print-color-adjust:exact;
-}
-/* client short code — needs to be big, he reads it at a glance */
-.psheet thead th.who-col{font-size:13pt;letter-spacing:.02em;padding:3pt 2pt}
-/* client full name — deliberately small, it is only a reminder */
-.psheet thead th .who{
-  display:block;font-size:6.2pt;font-weight:500;letter-spacing:0;
-  text-transform:none;line-height:1.15;margin-top:1.5pt;color:#333;
-}
-.psheet td.l{text-align:left}
-.psheet td.c,.psheet th.c{text-align:center}
-
-/* THE BIG THREE */
-.psheet td.q{text-align:center;font-weight:800;font-variant-numeric:tabular-nums;font-size:15pt;line-height:1.1}
-.psheet td.tt{text-align:center;font-weight:800;font-variant-numeric:tabular-nums;font-size:15pt;background:#f2f2f2 !important;
-  -webkit-print-color-adjust:exact;print-color-adjust:exact}
-.psheet td.nm{font-weight:700;font-size:12.5pt;letter-spacing:.003em;line-height:1.15}
-.psheet td.r{text-align:right;font-variant-numeric:tabular-nums;font-size:13pt;font-weight:800}
-
-/* the small stuff */
-.psheet td.sr{text-align:center;color:#555;font-size:7.5pt}
-.psheet td.u{text-align:center;font-size:8.5pt;font-weight:600;color:#333}
-.psheet tbody tr:nth-child(5n) td{border-bottom-width:1.3pt}
-
-/* ── Two-column split ─────────────────────────────────────── */
-.pcols{display:flex;gap:7pt;align-items:flex-start}
-.pcols > .pcol{flex:1;min-width:0}
-
-/* code → name key, sits directly above the table */
-.plegend{
-  margin:0 0 5pt;padding:4pt 7pt;
-  border:.6pt solid #000;background:#fafafa !important;
-  font-family:var(--sans);font-size:8.4pt;line-height:1.55;color:#333;
-  -webkit-print-color-adjust:exact;print-color-adjust:exact;
-}
-.plegend b{font-size:10pt;font-weight:800;color:#000;letter-spacing:.02em}
-.plegend .sepd{color:#bbb;margin:0 4pt}
-/* note strip — sits under the title, only rendered when there is a note */
-.pnotes{
-  margin:0 0 7pt;padding:4pt 7pt;
-  border-left:2.5pt solid #000;background:#f4f4f4 !important;
-  font-family:var(--sans);font-size:10.5pt;line-height:1.4;
-  -webkit-print-color-adjust:exact;print-color-adjust:exact;
-}
-.pnotes b{
-  font-size:8pt;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-  color:#555;margin-right:5pt;
-}
-.pfoot{
-  margin-top:9pt;padding-top:4pt;border-top:.5pt solid #999;
-  display:flex;justify-content:space-between;
-  font-family:var(--sans);font-size:8.5pt;letter-spacing:.1em;
-  text-transform:uppercase;color:#666;font-weight:700;
-}
-.pfoot:empty,.pfoot span:empty{min-height:0}
-
 @page{size:A4;margin:9mm}
 
 @media print{
   html,body{background:#fff !important;background-image:none !important;margin:0;padding:0}
   .wrap,.mast,.bar,.toast,.scrim{display:none !important}
   #printRoot{display:block !important}
-  .pwrap{transform-origin:top left}
+  /* the head band is a grey fill — without this it prints as white paper */
+  .ppage svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
 </head>
@@ -1117,6 +1057,9 @@ input,textarea,select,td.nmcell .it-name,.psheet{
           <svg viewBox="0 0 24 24"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
           Tidy
         </button>
+        <button class="btn btn-line btn-sm" id="mViewCat" title="See the list before printing">
+          ${ICON.eye} View
+        </button>
         <button class="btn btn-line btn-sm" id="mPdfCat" title="Save or send as PDF">
           <svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
           PDF
@@ -1209,6 +1152,13 @@ const PDF = (() => {
   /* A placeholder that survives the ASCII strip, swapped for the WinAnsi
      byte at the very end so its backslash is not itself escaped. */
   const BULLET = "\u0001";
+  /* What esc() will actually put on the page, without the PDF string
+     escaping — so the SVG renders the same glyphs, not the raw input. */
+  const plain = s => String(s)
+    .replace(/[–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
+    .replace(/₹/g, "Rs.").replace(/…/g, "...")
+    .replace(/[^ -~•·]/g, "");
+
   const esc = s => String(s)
     .replace(/[–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
     .replace(/[•·]/g, BULLET).replace(/₹/g, "Rs.").replace(/…/g, "...")
@@ -1222,7 +1172,7 @@ const PDF = (() => {
     const api = {
       W: A4.w, H: A4.h,
       page(landscape = false){
-        cur = { ops: [], w: landscape ? A4.h : A4.w, h: landscape ? A4.w : A4.h };
+        cur = { ops: [], draw: [], w: landscape ? A4.h : A4.w, h: landscape ? A4.w : A4.h };
         pages.push(cur);
         return api;
       },
@@ -1238,12 +1188,16 @@ const PDF = (() => {
         cur.ops.push(
           `${grey} g BT /${bold ? "F2" : "F1"} ${size} Tf ${dx.toFixed(2)} ${(cur.h - y).toFixed(2)} Td (${t}) Tj ET 0 g`
         );
+        /* Same call recorded structurally, so the sheet can be drawn again as
+           SVG without a second layout pass — one engine, two outputs. */
+        cur.draw.push({ t:"text", str: plain(str), x, y, size, bold, align, grey });
         return api;
       },
       line(x1, y1, x2, y2, { width = 0.6, grey = 0 } = {}){
         cur.ops.push(
           `${grey} G ${width} w ${x1.toFixed(2)} ${(cur.h - y1).toFixed(2)} m ${x2.toFixed(2)} ${(cur.h - y2).toFixed(2)} l S 0 G`
         );
+        cur.draw.push({ t:"line", x1, y1, x2, y2, width, grey });
         return api;
       },
       /* `g` sets a GRAY fill and takes one operand. `rg` takes three (r,g,b)
@@ -1252,9 +1206,11 @@ const PDF = (() => {
          table head band into a black bar with black text on it. */
       rect(x, y, w, h, { grey = 0.9 } = {}){
         cur.ops.push(`${grey} g ${x.toFixed(2)} ${(cur.h - y - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
+        cur.draw.push({ t:"rect", x, y, w, h, grey });
         return api;
       },
       measure: widthOf,
+      pages: () => pages.map(p => ({ w: p.w, h: p.h, draw: p.draw })),
 
       blob(){
         const objs = [];
@@ -1554,6 +1510,7 @@ const ICON = {
   edit: `<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`,
   trash:`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`,
   x:    `<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  eye:`<svg viewBox="0 0 24 24"><path d="M1.6 12S5.3 5 12 5s10.4 7 10.4 7-3.7 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="3.1"/></svg>`,
   wa:`<svg viewBox="0 0 24 24"><path d="M20.5 11.6a8.4 8.4 0 0 1-12.3 7.4L3.5 20.5l1.5-4.6a8.4 8.4 0 1 1 15.5-4.3z"/><path d="M8.6 8.3c.3-.6.6-.6.9-.6h.6c.2 0 .4.1.6.5l.7 1.6c.1.3 0 .5-.1.7l-.4.5c-.2.2-.2.3-.1.5a6 6 0 0 0 2.7 2.4c.2.1.4.1.6-.1l.5-.6c.2-.2.4-.2.6-.1l1.6.8c.3.2.4.3.4.5s0 .9-.3 1.3c-.4.4-1 .7-1.7.7-1.3 0-3.1-.9-4.5-2.3s-2.3-3.2-2.3-4.5c0-.6.2-1.2.5-1.6z"/></svg>`,
   share:`<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`,
   print:`<svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`,
@@ -2179,14 +2136,31 @@ function wireGrid(wrap, cols){
       touched();
     };
     inp.onkeydown = e => {
-      if(e.key !== "Enter" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      /* Android's number pad has no Enter — it offers a Tab arrow instead.
+         Left alone Tab follows DOM order, which runs ACROSS the row to the
+         next client, and that is what he was seeing. Tab is redirected down
+         the column like Enter, since orders arrive one client at a time. */
+      const fwd  = e.key === "Enter" || e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey);
+      const back = e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey);
+      if(!fwd && !back) return;
       e.preventDefault();
-      const dir = e.key === "ArrowUp" ? -1 : 1;
-      const col = colOf(inp);
-      const i = at.get(inp);
+
+      const dir  = back ? -1 : 1;
+      const col  = colOf(inp);
       const pool = cells.filter(c => colOf(c) === col);
-      const k = pool.indexOf(inp);
-      const nx = pool[k + dir];
+      const k    = pool.indexOf(inp);
+      let nx = pool[k + dir];
+
+      /* At the end of a column, carry on at the top of the next client's
+         column rather than stopping dead. */
+      if(!nx){
+        const ci = cols.findIndex(c => c.id === col);
+        const nc = cols[ci + dir];
+        if(nc){
+          const next = cells.filter(c => colOf(c) === nc.id);
+          nx = dir > 0 ? next[0] : next[next.length - 1];
+        }
+      }
       if(nx){ nx.focus(); nx.select?.(); }
     };
     inp.onfocus = () => inp.closest("tr")?.classList.add("focus");
@@ -2834,214 +2808,9 @@ function applyBackupConfirm(p){
 }
 
 /* ══════════════════════════════════════════════════════════
-   11 · PRINT — scaled to exactly one A4 page
+   11 · PRINT SETUP
    ══════════════════════════════════════════════════════════ */
 const MM = 96/25.4;
-const PAGE = {
-  portrait:  { w:(210-18)*MM, h:(297-18)*MM },
-  landscape: { w:(297-18)*MM, h:(210-18)*MM },
-};
-
-const brandLine = () => showBrand() ? `<div class="sub">${esc(brandText())}</div>` : "";
-const foot = label =>
-  `<div class="pfoot"><span>${showBrand()?esc(brandText()):""}</span><span>${esc(label)}</span></div>`;
-
-/* One purchase table. `showNames` controls whether each client column carries
-   the full name under its code — dropped in two-column mode, where a legend
-   under the sheet carries the names instead so the codes stay large. */
-function buyTable(slice, cols, offset, showNames){
-  const n = Math.max(cols.length, 1);
-  /* Quantities are 1-3 digits, so client columns stay narrow and the item name
-     gets the room it needs to sit on one line. Shares are normalised so they
-     always total 100%, however many clients there are. */
-  /* rEach must hold 3-4 digits at 15pt without wrapping, since numeric cells
-     are now nowrap and would otherwise spill over their border. */
-  const rSr = 3, rUnit = 5, rTot = 8, rItem = 30, rEach = 8;
-  const raw = rSr + rUnit + rTot + rItem + n * rEach;
-  const k = 100 / raw;
-  const wSr = rSr*k, wUnit = rUnit*k, wTot = rTot*k, wItem = rItem*k, each = rEach*k;
-
-  return `<table>
-    <colgroup>
-      <col style="width:${wSr}%"><col style="width:${wItem}%"><col style="width:${wUnit}%">
-      ${cols.map(() => `<col style="width:${each}%">`).join("")}
-      <col style="width:${wTot}%">
-    </colgroup>
-    <thead><tr>
-      <th class="c">#</th>
-      <th>Item</th>
-      <th class="c">Unit</th>
-      ${cols.map(c => `<th class="c who-col">${esc(c.code)}${
-        showNames ? `<span class="who">${esc(c.name)}</span>` : ""}</th>`).join("")}
-      <th class="c">Tot</th>
-    </tr></thead>
-    <tbody>${slice.map((it,i) => {
-      const tot = cols.reduce((s,c) => s + (Number(cellVal(it.id,c.id))||0), 0);
-      return `<tr>
-        <td class="sr">${offset+i+1}</td>
-        <td class="nm">${esc(it.name)}</td>
-        <td class="u">${esc(it.unit)}</td>
-        ${cols.map(c => {
-          const v = cellVal(it.id, c.id);
-          return `<td class="q">${hasVal(v)?v:""}</td>`;
-        }).join("")}
-        <td class="tt">${tot||""}</td>
-      </tr>`;
-    }).join("")}</tbody>
-  </table>`;
-}
-
-const codeLegend = cols => !cols.length ? "" : `<div class="plegend">${
-  cols.map(c => `<b>${esc(c.code)}</b> ${esc(c.name)}`).join(`<span class="sepd">·</span>`)
-}</div>`;
-
-/* mode: 1 = single table, 2 = split left/right so twice as many rows fit */
-function purchaseSheet(mode = 1){
-  const { date, note, clients } = S.buy;
-  const cols = clients.map(findClient).filter(Boolean);
-  /* only what he actually filled reaches the paper */
-  const live = orderedItems().filter(rowFilled);
-
-  const head = `<div class="ph">
-      <div><h1>Purchase List</h1>${brandLine()}</div>
-      <div class="meta">
-        <div><b>${esc(niceDate(date))}</b></div>
-        <div class="fine">${live.length} item${live.length===1?"":"s"} · ${cols.length} client${cols.length===1?"":"s"}</div>
-      </div>
-    </div>`;
-
-  /* Notes only appear when actually written, and sit at the top under the
-     title where they are read before the shopping starts. */
-  const notes = note.trim()
-    ? `<div class="pnotes"><b>Note</b> ${esc(note.trim())}</div>` : "";
-
-  let body;
-  if(mode === 2 && live.length > 1){
-    const half = Math.ceil(live.length / 2);
-    body = `${codeLegend(cols)}
-      <div class="pcols">
-        <div class="pcol">${buyTable(live.slice(0,half), cols, 0, false)}</div>
-        <div class="pcol">${buyTable(live.slice(half), cols, half, false)}</div>
-      </div>`;
-  } else {
-    body = `${codeLegend(cols)}${buyTable(live, cols, 0, false)}`;
-  }
-
-  return `<div class="psheet">
-    ${head}
-    ${notes}
-    ${body}
-    ${foot("Purchase List")}
-  </div>`;
-}
-
-function priceSheet(){
-  const { date, custId, rows } = S.rate;
-  const cust = findClient(custId);
-  const live = rows.filter(r => findItem(r.itemId));
-  return `<div class="psheet">
-    <div class="ph">
-      <div><h1>Price List</h1>${brandLine()}</div>
-      <div class="meta">
-        <div><b>${esc(cust?cust.name:"—")}</b></div>
-        <div class="fine">${esc(niceDate(date))}</div>
-      </div>
-    </div>
-    <table>
-      <colgroup>
-        <col style="width:7%"><col style="width:55%"><col style="width:16%"><col style="width:22%">
-      </colgroup>
-      <thead><tr>
-        <th class="c">#</th>
-        <th>Item</th>
-        <th class="c">Unit</th>
-        <th class="c">Rate ₹</th>
-      </tr></thead>
-      <tbody>${live.map((r,i) => {
-        const it = findItem(r.itemId);
-        const rate = (r.rate!==null && r.rate!==undefined) ? r.rate : it.price;
-        return `<tr>
-          <td class="sr">${i+1}</td>
-          <td class="nm">${esc(it.name)}</td>
-          <td class="u">${esc(r.unit)}</td>
-          <td class="r">${rate!=null?money(rate):""}</td>
-        </tr>`;
-      }).join("")}</tbody>
-    </table>
-    ${foot("Price List")}
-  </div>`;
-}
-
-function catalogueSheet(){
-  const all = [...db.items].sort((a,b) =>
-    a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-  const half = Math.ceil(all.length/2);
-  const col = arr => !arr.length ? "" : `<table>
-    <colgroup><col style="width:58%"><col style="width:20%"><col style="width:22%"></colgroup>
-    <thead><tr><th>Item</th><th class="c">Unit</th><th class="c">₹</th></tr></thead>
-    <tbody>${arr.map(i => `<tr>
-      <td class="nm">${esc(i.name)}</td>
-      <td class="u">${esc(i.unit)}</td>
-      <td class="r">${i.price!=null?money(i.price):""}</td>
-    </tr>`).join("")}</tbody></table>`;
-  return `<div class="psheet">
-    <div class="ph">
-      <div><h1>Item &amp; Price List</h1>${brandLine()}</div>
-      <div class="meta"><div><b>${esc(niceDate(todayISO()))}</b></div>
-        <div class="fine">${all.length} items</div></div>
-    </div>
-    <div style="display:flex;gap:11pt;align-items:flex-start">
-      <div style="flex:1">${col(all.slice(0,half))}</div>
-      <div style="flex:1">${col(all.slice(half))}</div>
-    </div>
-    ${foot("Item & Price List")}
-  </div>`;
-}
-
-/* Measure the natural height of `html` when laid out at `layoutW` px wide. */
-function measureH(html, layoutW){
-  const root = $("#printRoot");
-  root.innerHTML = `<div class="pwrap" id="__probe" style="width:${layoutW}px">${html}</div>`;
-  const el = $("#__probe");
-  el.style.cssText += ";position:absolute;left:-99999px;top:0;visibility:hidden";
-  root.style.display = "block";
-  const nat = el.scrollHeight;
-  root.style.display = "";
-  root.innerHTML = "";
-  return nat;
-}
-
-/* Largest zoom z that still fits one page — while filling the FULL page width.
-   `zoom` scales width as well as height, so laying out at page width and then
-   zooming to 0.5 would render the sheet at half width and leave the right half
-   of the paper blank. Instead we lay out at (pageWidth / z) so that after the
-   zoom the rendered width lands exactly on the page. Because the wider layout
-   also means less text wrapping, the height changes with z too — hence the
-   binary search rather than a single division. */
-function bestZoom(html, w, h){
-  const base = measureH(html, w);
-  if(base <= h) return 1;
-
-  /* Fixed-point rather than binary search: each measurement is a full reflow
-     of a large table, so converge in a handful of steps rather than ten. */
-  let z = Math.max(0.28, h / base);
-  for(let i = 0; i < 5; i++){
-    const rendered = measureH(html, w / z) * z;
-    const adj = h / rendered;
-    if(adj >= 1 && adj < 1.015) break;          // close enough, stop reflowing
-    z = Math.max(0.28, Math.min(1, z * adj * 0.99));
-  }
-  /* Hard guarantee: keep shrinking until it genuinely fits. Browsers round
-     sub-pixel heights and margins are not always inside scrollHeight, so this
-     last pass is what actually keeps it off a second sheet. */
-  for(let i = 0; i < 6 && measureH(html, w / z) * z > h; i++) z *= 0.96;
-  return z;
-}
-
-/* ~4mm of slack so a rounding hair never tips onto a second page */
-const SAFE = 15;
-const fitZoom = (html, orient) => bestZoom(html, PAGE[orient].w, PAGE[orient].h - SAFE);
-
 /* The browser stamps its own header (page title) and footer (file URL) on every
    printout. No page can switch that off — only the person at the print dialog
    can, and Chrome then remembers it. Show them where, once. */
@@ -3080,40 +2849,52 @@ function withPrintTips(go){
   });
 }
 
-/* Try single-column and split layouts, print whichever reads larger.
-   Also peek at the other orientation and say so if it would be clearly better. */
-function printPurchase(){
-  const o = orient();
-  const live = db.items.filter(rowFilled).length;
-  const one = purchaseSheet(1);
-
-  if(live < 8){ printOut(one, o); return; }
-
-  const two = purchaseSheet(2);
-  const best = or => {
-    const a = fitZoom(one, or), b = fitZoom(two, or);
-    return b > a * 1.05 ? { z:b, mode:2 } : { z:a, mode:1 };
-  };
-
-  const here  = best(o);
-  const other = best(o === "portrait" ? "landscape" : "portrait");
-
-  printOut(here.mode === 2 ? two : one, o);
-
-  const bits = [];
-  if(here.mode === 2) bits.push("split into 2 columns");
-  if(other.z > here.z * 1.15){
-    bits.push(`${o === "portrait" ? "landscape" : "portrait"} would read ${Math.round(other.z/here.z*100-100)}% larger`);
-  }
-  if(bits.length) toast(bits.join(" · "));
-}
-
 /* ══════════════════════════════════════════════════════════
    11b · PDF SHEETS
    The Android WebView has no window.print(), so the app draws the
    sheet itself and hands the file to the share sheet. Same routine
    feeds "Send on WhatsApp".
    ══════════════════════════════════════════════════════════ */
+/* ── The sheet as SVG ──────────────────────────────────────────────
+   The printed sheet and the PDF used to be two separate renderers fed by
+   two separate layout passes, and they drifted apart — different splitting,
+   different type, a different client key. The PDF layout is now the ONLY
+   layout: it records what it draws, and this replays those same ops as SVG
+   for on-screen preview and for printing.
+
+   SVG is the right target because its text y IS the baseline, exactly as in
+   a PDF content stream, so no coordinate fudging is needed and the printed
+   sheet lands on paper identically to the file. */
+const xmlEsc = s => String(s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;");
+
+/* PDF grey runs 0 = black .. 1 = white, the same direction as an RGB
+   channel — so it maps straight across. Inverting it here painted every
+   black text op white, which on white paper is an empty sheet. */
+const greyCss = g => { const v = Math.round(g * 255); return `rgb(${v},${v},${v})`; };
+
+function pageSVG(p){
+  const bits = [];
+  p.draw.forEach(o => {
+    if(o.t === "rect"){
+      bits.push(`<rect x="${o.x.toFixed(2)}" y="${o.y.toFixed(2)}" width="${o.w.toFixed(2)}" height="${o.h.toFixed(2)}" fill="${greyCss(o.grey)}"/>`);
+    } else if(o.t === "line"){
+      bits.push(`<line x1="${o.x1.toFixed(2)}" y1="${o.y1.toFixed(2)}" x2="${o.x2.toFixed(2)}" y2="${o.y2.toFixed(2)}" stroke="${greyCss(o.grey)}" stroke-width="${o.width}"/>`);
+    } else if(o.t === "text"){
+      const anchor = o.align === "center" ? "middle" : o.align === "right" ? "end" : "start";
+      bits.push(`<text x="${o.x.toFixed(2)}" y="${o.y.toFixed(2)}" font-size="${o.size}"${
+        o.bold ? ' font-weight="700"' : ""} fill="${greyCss(o.grey)}"${
+        anchor !== "start" ? ` text-anchor="${anchor}"` : ""}>${xmlEsc(o.str)}</text>`);
+    }
+  });
+  return `<svg class="psvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${p.w.toFixed(2)} ${p.h.toFixed(2)}" preserveAspectRatio="xMidYMid meet">`
+    + `<rect x="0" y="0" width="${p.w.toFixed(2)}" height="${p.h.toFixed(2)}" fill="#ffffff"/>`
+    + `<g font-family="Helvetica, Arial, 'Liberation Sans', sans-serif">${bits.join("")}</g></svg>`;
+}
+
+const docSVG = d => d.pages().map(pageSVG).join("");
+
 /* Fit text into a width by trimming and adding an ellipsis, since a PDF
    content stream has no notion of wrapping. */
 function pdfClip(str, maxW, size, bold){
@@ -3151,7 +2932,7 @@ const PSCALE = [
   { key:"tight",   rowH:12,   name:8,    qty:9.5,  code:8,    unit:7,   sr:6,   head:6.5 },
 ];
 
-function pdfPurchase(){
+function buildPurchase(){
   const cols  = S.buy.clients.map(findClient).filter(Boolean);
   const items = orderedItems().filter(rowFilled);
   const note  = S.buy.note.trim();
@@ -3323,11 +3104,12 @@ function pdfPurchase(){
 
   d.text(showBrand() ? brandText() : "", M, H - M + 6, { size:7.5, grey:0.45 });
   d.text("Purchase List", W - M, H - M + 6, { size:7.5, grey:0.45, align:"right" });
-  return d.blob();
+  return d;
 }
+const pdfPurchase = () => buildPurchase().blob();
 
 /* Item list with prices, two columns so the whole catalogue fits a page. */
-function pdfCatalogue(){
+function buildCatalogue(){
   const all = itemsInOrder().sort((a,b) =>
     catRank(a.category) - catRank(b.category) || a.name.localeCompare(b.name));
   const d = PDF.doc().page(false);
@@ -3371,8 +3153,130 @@ function pdfCatalogue(){
 
   d.text(showBrand() ? brandText() : "", M, H - M + 4, { size:7, grey:0.45 });
   d.text("Item & Price List", W - M, H - M + 4, { size:7, grey:0.45, align:"right" });
-  return d.blob();
+  return d;
 }
+const pdfCatalogue = () => buildCatalogue().blob();
+
+/* Price list — same masthead, rule, key and type scale as the purchase
+   sheet, because they are the same family of document.
+
+   This was missing outright: pdfPrice() was called by the PDF and WhatsApp
+   buttons on the Price List tab but never defined, so both threw a
+   ReferenceError that the catch turned into "Please try again". */
+function buildPrice(){
+  const cust = findClient(S.rate.custId);
+  const rows = S.rate.rows.filter(r => findItem(r.itemId));
+
+  const M = 30, GAP = 16;
+  const wSr = 17, wUnit = 32, wRate = 58;
+
+  function plan(blocks, sc){
+    const W = PDF.A4.w, H = PDF.A4.h;
+    const blockW = (W - 2*M - GAP*(blocks-1)) / blocks;
+    const wName  = blockW - wSr - wUnit - wRate;
+    if(wName < 74) return null;
+
+    const lines = rows.map(r =>
+      Math.min(2, pdfWrap(findItem(r.itemId).name, wName - 7, sc.name, true).length));
+    const rowHeights = lines.map(n => n === 1 ? sc.rowH : sc.rowH + sc.name * 1.02);
+
+    const total = rowHeights.reduce((a, b) => a + b, 0);
+    const target = total / blocks;
+    const groups = Array.from({ length: blocks }, () => []);
+    let gi = 0, run = 0;
+    rowHeights.forEach((h, i) => {
+      if(gi < blocks - 1 && run + h / 2 > target){ gi++; run = 0; }
+      groups[gi].push(i);
+      run += h;
+    });
+
+    const topH  = 30 + (showBrand() ? 12 : 0) + 12 + (cust ? 17 : 0);
+    const avail = H - M - 18 - (M + topH);
+    const tallest = Math.max(...groups.map(g =>
+      sc.rowH + g.reduce((a, i) => a + rowHeights[i], 0)));
+    if(tallest > avail) return null;
+
+    return { blocks, sc, W, H, blockW, wName, topH, lines, rowHeights, groups };
+  }
+
+  const options = [];
+  for(const sc of PSCALE) for(const blocks of [1, 2]){
+    const p = plan(blocks, sc);
+    if(p) options.push(p);
+  }
+  options.sort((x, y) => (y.sc.name - x.sc.name) || (x.blocks - y.blocks));
+  const L = options[0] || plan(2, PSCALE[PSCALE.length-1]) || plan(1, PSCALE[PSCALE.length-1]);
+
+  const { sc, W, H, blockW, wName, blocks, lines, rowHeights, groups } = L;
+  const d = PDF.doc().page(false);
+
+  let y = M + 15;
+  d.text("Price List", M, y, { size:16, bold:true });
+  d.text(niceDate(S.rate.date), W - M, y, { size:11.5, bold:true, align:"right" });
+  y += 12;
+  if(showBrand()) d.text(brandText(), M, y, { size:8, grey:0.42 });
+  d.text(`${rows.length} item${rows.length===1?"":"s"}`, W - M, y,
+         { size:8, grey:0.42, align:"right" });
+  y += 10;
+  d.line(M, y, W - M, y, { width:1.1 });
+  y += 14;
+
+  if(cust){
+    d.text(`${cust.code} - ${cust.name}`, M, y, { size:9.5, bold:true, grey:0.15 });
+    y += 17;
+  }
+
+  const top = y;
+  for(let bi = 0; bi < blocks; bi++){
+    const x0  = M + bi * (blockW + GAP);
+    const xNm = x0 + wSr, xUn = xNm + wName, xRt = xUn + wUnit;
+    const idxs = groups[bi] || [];
+    if(!idxs.length) continue;
+
+    const base = top + sc.rowH * 0.68;
+    d.rect(x0, top, blockW, sc.rowH, { grey:0.88 });
+    d.text("#",    x0 + wSr/2,      base, { size:sc.head, bold:true, align:"center", grey:0.3 });
+    d.text("ITEM", xNm + 4,         base, { size:sc.head, bold:true, grey:0 });
+    d.text("UNIT", xUn + wUnit/2,   base, { size:sc.head, bold:true, align:"center", grey:0.3 });
+    d.text("RATE", xRt + wRate - 4, base, { size:sc.head, bold:true, align:"right", grey:0.3 });
+    d.line(x0, top,           x0 + blockW, top,           { width:0.9 });
+    d.line(x0, top + sc.rowH, x0 + blockW, top + sc.rowH, { width:0.9 });
+
+    let ry = top + sc.rowH;
+    idxs.forEach(ix => {
+      const r = rows[ix], it = findItem(r.itemId);
+      const h = rowHeights[ix], two = lines[ix] === 2;
+      const bl  = ry + (two ? sc.name * 0.95 : h * 0.68);
+      const mid = ry + h * 0.62;
+      const rate = (r.rate !== null && r.rate !== undefined) ? r.rate : it.price;
+
+      d.text(String(ix + 1), x0 + wSr/2, mid, { size:sc.sr, align:"center", grey:0.45 });
+      if(two){
+        const parts = pdfWrap(it.name, wName - 7, sc.name, true);
+        d.text(parts[0], xNm + 4, bl, { size:sc.name, bold:true });
+        d.text(pdfClip(parts.slice(1).join(" "), wName - 7, sc.name, true),
+               xNm + 4, bl + sc.name * 1.02, { size:sc.name, bold:true });
+      } else {
+        d.text(it.name, xNm + 4, bl, { size:sc.name, bold:true });
+      }
+      d.text(pdfClip(r.unit, wUnit - 3, sc.unit, false), xUn + wUnit/2, mid,
+             { size:sc.unit, align:"center", grey:0.25 });
+      if(rate != null)
+        d.text(money(rate), xRt + wRate - 4, mid, { size:sc.qty, bold:true, align:"right" });
+
+      ry += h;
+      d.line(x0, ry, x0 + blockW, ry, { width:0.3, grey:0.6 });
+    });
+
+    [x0, xNm, xUn, xRt, xRt + wRate].forEach(x =>
+      d.line(x, top, x, ry, { width:0.3, grey:0.55 }));
+  }
+
+  d.text(showBrand() ? brandText() : "", M, H - M + 6, { size:7.5, grey:0.45 });
+  d.text("Price List", W - M, H - M + 6, { size:7.5, grey:0.45, align:"right" });
+  return d;
+}
+const pdfPrice = () => buildPrice().blob();
 
 /* WhatsApp cannot be handed a file by URL — wa.me only carries text. The
    only way to attach the PDF is the OS share sheet, where WhatsApp appears
@@ -3479,27 +3383,28 @@ async function sharePDF(kind){
   }
 }
 
-function printOut(html, orient){
-  const root = $("#printRoot");
-  const { w, h } = PAGE[orient];
 
-  const z = bestZoom(html, w, h - SAFE);
-  /* Lay out wider than the page, then zoom back down: rendered width = w. */
-  const layoutW = z < 1 ? w / z : w;
+/* Print the very same layout the PDF uses, as SVG at exact A4 points.
+   The page box is the sheet, so there is no zoom-to-fit pass and no second
+   renderer that can drift: what the preview shows, what prints, and what the
+   PDF contains are one drawing. */
+function printDoc(d){
+  const pages = d.pages();
+  if(!pages.length) return;
+  const land = pages[0].w > pages[0].h;
+  const root = $("#printRoot");
 
   $("#pageRule")?.remove();
   const rule = document.createElement("style");
   rule.id = "pageRule";
-  rule.textContent = `@page{size:A4 ${orient};margin:9mm}`;
+  /* margin:0 — the sheet carries its own 30pt margin, and adding the
+     browser's on top would shrink it onto a second page. */
+  rule.textContent = `@page{size:A4 ${land ? "landscape" : "portrait"};margin:0}`;
   document.head.appendChild(rule);
 
-  /* `zoom` (not `transform`) — a transform leaves the original box in flow, so
-     the browser still paginates on the unscaled height and spills to page 2. */
-  root.innerHTML = `<div class="pwrap" id="pwrap" style="width:${layoutW}px${
-    z < 1 ? `;zoom:${z}` : ""}">${html}</div>`;
+  root.innerHTML = pages.map(p => `<div class="ppage">${pageSVG(p)}</div>`).join("");
 
-  /* Chrome prints the page <title> in its header. Blank it for the duration so
-     the sheet does not carry "Mobile Gallery — Mandi Ledger" across the top. */
+  /* Chrome puts the page <title> in its header; blank it for the duration. */
   const realTitle = document.title;
   document.title = "";
 
@@ -3511,6 +3416,53 @@ function printOut(html, orient){
   };
   addEventListener("afterprint", tidy);
   setTimeout(() => { print(); setTimeout(tidy, 800); }, 70);
+}
+
+const SHEETS = {
+  purchase:  { build: () => buildPurchase(),  label:"Purchase List" },
+  price:     { build: () => buildPrice(),     label:"Price List" },
+  catalogue: { build: () => buildCatalogue(), label:"Item & Price List" },
+};
+
+/* See the sheet before committing it to paper or to a file. Same drawing,
+   just on screen — so there is nothing to be surprised by afterwards. */
+function previewSheet(kind){
+  const spec = SHEETS[kind];
+  let d;
+  try{ d = spec.build(); }
+  catch(e){ console.error(e); toast("Please try again"); return; }
+
+  const p = d.pages()[0];
+  dismiss?.();
+  const el = document.createElement("div");
+  el.className = "pvw";
+  el.innerHTML = `
+    <div class="pvw-head">
+      <button class="ibtn" data-close aria-label="Close preview">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="pvw-ttl">
+        <b>${esc(spec.label)}</b>
+        <span>${p.w > p.h ? "Landscape" : "Portrait"} &middot; A4 &middot; exactly what prints</span>
+      </div>
+    </div>
+    <div class="pvw-body">${docSVG(d)}</div>
+    <div class="pvw-foot">
+      <button class="btn btn-line btn-sm" data-pdf>${ICON.share} PDF</button>
+      <button class="btn btn-wa btn-sm" data-wa>${ICON.wa} WhatsApp</button>
+      <button class="btn btn-go" data-print>${ICON.print} Print</button>
+    </div>`;
+  document.body.appendChild(el);
+
+  const close = () => { el.remove(); dismiss = null; document.removeEventListener("keydown", key); };
+  dismiss = close;
+  function key(e){ if(e.key === "Escape"){ e.preventDefault(); close(); } }
+  document.addEventListener("keydown", key);
+
+  el.querySelector("[data-close]").onclick = close;
+  el.querySelector("[data-print]").onclick = () => { close(); withPrintTips(() => printDoc(spec.build())); };
+  el.querySelector("[data-pdf]").onclick   = () => { close(); sharePDF(kind); };
+  el.querySelector("[data-wa]").onclick    = () => { close(); shareWhatsApp(kind); };
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -3535,6 +3487,8 @@ function drawBar(){
         ${filled?`<span class="sep">·</span><b>${filled}</b> filled`:""}
       </div>
       <button class="btn btn-line btn-sm" id="barClear" ${live.length||S.buy.clients.length?"":"disabled"}>Clear</button>
+      <button class="btn btn-line btn-sm" id="barView" ${ok?"":"disabled"} title="See the sheet before printing">
+        ${ICON.eye} View</button>
       <button class="btn btn-line btn-sm" id="barPdf" ${ok?"":"disabled"} title="Save as PDF">
         ${ICON.share} PDF</button>
       <button class="btn btn-wa btn-sm" id="barWa" ${ok?"":"disabled"} title="Send on WhatsApp">
@@ -3543,7 +3497,8 @@ function drawBar(){
 
     $("#barPdf").onclick = () => sharePDF("purchase");
     $("#barWa").onclick  = () => shareWhatsApp("purchase");
-    $("#barPrint").onclick = () => withPrintTips(printPurchase);
+    $("#barPrint").onclick = () => withPrintTips(() => printDoc(buildPurchase()));
+    $("#barView").onclick  = () => previewSheet("purchase");
     $("#barClear").onclick = () => confirmish("Clear this sheet?",
       "Clients, items and quantities on the purchase sheet will be cleared. Master data is untouched.",
       () => { S.buy = freshBuy();
@@ -3556,6 +3511,8 @@ function drawBar(){
     bar.innerHTML = `
       <div class="stat"><b>${live.length}</b> item${live.length===1?"":"s"} quoted</div>
       <button class="btn btn-line btn-sm" id="barClear" ${live.length?"":"disabled"}>Clear</button>
+      <button class="btn btn-line btn-sm" id="barView" ${live.length?"":"disabled"} title="See the sheet before printing">
+        ${ICON.eye} View</button>
       <button class="btn btn-line btn-sm" id="barPdf" ${live.length?"":"disabled"} title="Save as PDF">
         ${ICON.share} PDF</button>
       <button class="btn btn-wa btn-sm" id="barWa" ${live.length?"":"disabled"} title="Send on WhatsApp">
@@ -3563,7 +3520,8 @@ function drawBar(){
       <button class="btn btn-go" id="barPrint" ${live.length?"":"disabled"}>${ICON.print} Print</button>`;
     $("#barPdf").onclick = () => sharePDF("price");
     $("#barWa").onclick  = () => shareWhatsApp("price");
-    $("#barPrint").onclick = () => withPrintTips(() => printOut(priceSheet(), "portrait"));
+    $("#barPrint").onclick = () => withPrintTips(() => printDoc(buildPrice()));
+    $("#barView").onclick  = () => previewSheet("price");
     $("#barClear").onclick = () => confirmish("Clear this quote?",
       "Items and rates on this price list will be cleared. Master data is untouched.",
       () => { S.rate.rows = []; drawRate(); toast("Quote cleared"); }, "Clear");
@@ -3585,7 +3543,8 @@ $("#mPdfCat").onclick = async () => {
   try{ reportSave(await deliver(pdfCatalogue(), "catalogue", "Item List", "pdf")); }
   catch(e){ console.error(e); toast("Please try again"); }
 };
-$("#mPrintCat").onclick = () => withPrintTips(() => printOut(catalogueSheet(), "portrait"));
+$("#mPrintCat").onclick = () => withPrintTips(() => printDoc(buildCatalogue()));
+$("#mViewCat").onclick  = () => previewSheet("catalogue");
 
 /* ══════════════════════════════════════════════════════════
    13 · BOOT
