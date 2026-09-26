@@ -123,3 +123,10 @@ only as a fallback for a phone with no connectivity at setup time.
 
 Chrome, Edge, Firefox, Safari — desktop and mobile. Android 5.1+ via the APK.
 Print output verified in Chrome and OpenOffice.
+
+---
+
+## License
+
+Proprietary. Copyright (c) 2026 Mobile Gallery. All rights reserved. Designed and developed by
+[Stackified](https://github.com/stackified). See [LICENSE](LICENSE).
