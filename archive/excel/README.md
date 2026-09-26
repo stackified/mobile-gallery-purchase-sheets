@@ -3,7 +3,7 @@
 The first version of this tool was an Excel workbook. These are the fourteen
 iterations it went through before it became the web app in the repo root.
 
-Kept only for reference — **do not use them**. They are superseded by
+Kept only for reference: **do not use them**. They are superseded by
 `index.html`, which fixed the problems these could not:
 
 - Excel silently stripped the dropdown data-validation on some installs

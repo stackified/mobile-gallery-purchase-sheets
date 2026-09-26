@@ -6,14 +6,14 @@ nothing to install on your machine.
 
 ---
 
-## Step 1 — Put the folder online (once, ~2 minutes)
+## Step 1: Put the folder online (once, ~2 minutes)
 
-The files must be served over **https://** — Android refuses to wrap a
+The files must be served over **https://**: Android refuses to wrap a
 `file://` page, and service workers only run over https.
 
 1. Go to **https://app.netlify.com/drop**
 2. Drag the whole **Mobile Gallery** folder onto the page
-   (the folder, not just `index.html` — it needs `manifest.webmanifest`,
+   (the folder, not just `index.html`; it needs `manifest.webmanifest`,
    `sw.js` and `icons/`)
 3. You get a URL like `https://tiny-name-1234.netlify.app`
 4. Open it on your phone and confirm the app loads
@@ -21,25 +21,25 @@ The files must be served over **https://** — Android refuses to wrap a
 Free, no account needed for the first deploy. Sign in later if you want a
 nicer subdomain or to re-deploy over the same URL.
 
-> Any static host works — GitHub Pages, Cloudflare Pages, Vercel, Firebase
+> Any static host works: GitHub Pages, Cloudflare Pages, Vercel, Firebase
 > Hosting. Netlify Drop is just the fastest with no signup.
 
 ---
 
-## Step 2 — Generate the APK
+## Step 2: Generate the APK
 
 1. Go to **https://www.pwabuilder.com**
 2. Paste your Netlify URL, press **Start**
-3. It scores the app — the manifest, icons and service worker are already in
+3. It scores the app; the manifest, icons and service worker are already in
    place, so it should pass
 4. Choose **Android** → **Generate Package**
 5. Options that matter:
-   - **Package ID** — something like `services.protego.mobilegallery`
+   - **Package ID**: something like `services.protego.mobilegallery`
      (reverse-domain, permanent, cannot change after install)
-   - **App name** — `Mobile Gallery`
-   - **Signing key** — pick **"Create new"**. It gives you a
+   - **App name**: `Mobile Gallery`
+   - **Signing key**: pick **"Create new"**. It gives you a
      `signing.keystore` file plus a password.
-     **Save both somewhere safe** — without them you can never ship an
+     **Save both somewhere safe**; without them you can never ship an
      update to the same app.
 6. Download the zip. Inside:
    - `app-release-signed.apk` → this is what you install on the phone
@@ -48,10 +48,10 @@ nicer subdomain or to re-deploy over the same URL.
 
 ---
 
-## Step 3 — Install on his phone
+## Step 3: Install on his phone
 
 1. Send `app-release-signed.apk` over WhatsApp / USB / Google Drive
-2. Tap it. Android will say *"unsafe app"* or *"install unknown apps"* —
+2. Tap it. Android will say *"unsafe app"* or *"install unknown apps"*;
    that is normal for anything not from the Play Store. Allow it for the app
    you're installing from (Files or WhatsApp), then confirm.
 3. The app appears in the drawer with the ledger icon and runs with no
@@ -68,8 +68,9 @@ That means:
   open.** No new APK, nothing to reinstall.
 - You only rebuild the APK if the name, icon or package ID changes.
 
-When you re-deploy, bump `CACHE` in `sw.js` (e.g. `v5` → `v6`) so the phone
-fetches the new build instead of the cached one.
+You no longer bump a cache version by hand: on every Cloudflare Pages deploy,
+`build.sh` stamps a new build id into the cache name in `sw.js`, so the phone
+fetches the new build instead of the cached one (see `SETUP-HOSTING.md`).
 
 ---
 
@@ -99,7 +100,7 @@ genuinely hard to tell from the APK.
 | Install warnings | none | "unknown app" warning |
 | Can be shared as a file | no | yes |
 
-**Printing is the deciding factor.** Chrome's print dialog is the better one —
+**Printing is the deciding factor.** Chrome's print dialog is the better one:
 it remembers the "Headers and footers" setting, has clearer paper/orientation
 controls, and handles printer discovery better. Inside an APK you get the
 system WebView print dialog, which is more basic.

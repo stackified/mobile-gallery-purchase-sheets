@@ -1,7 +1,7 @@
 # MobileGallery-v1.apk
 
 Built locally. Self-contained: the whole web app is bundled **inside** the APK
-(`assets/public/`), so it needs no hosting and no internet — it works in the
+(`assets/public/`), so it needs no hosting and no internet: it works in the
 mandi with the phone in aeroplane mode.
 
 | | |
@@ -16,11 +16,11 @@ mandi with the phone in aeroplane mode.
 ## Installing on his phone
 
 1. Send `MobileGallery-v1.apk` over WhatsApp, USB, or Google Drive.
-2. Tap it. Android warns about installing outside the Play Store — expected for
+2. Tap it. Android warns about installing outside the Play Store, which is expected for
    any self-signed app. Allow it for the app you're installing from, then confirm.
 3. It appears in the drawer as **Mobile Gallery** with the ledger icon.
 
-## The keystore — keep this safe
+## The keystore: keep this safe
 
 `mobile-gallery-release.keystore`
 
@@ -49,12 +49,12 @@ npx cap copy android
 bash build-apk.sh
 ```
 
-Bump `versionCode` in `android/app/build.gradle` first — Android refuses to
+Bump `versionCode` in `android/app/build.gradle` first: Android refuses to
 install an update whose `versionCode` is not higher than the installed one.
 
 ## Toolchain
 
-Installed under `C:\Users\Admin\AndroidBuildTools` (~700 MB) — safe to delete
+Installed under `C:\Users\Admin\AndroidBuildTools` (~700 MB), safe to delete
 if you never rebuild.
 
 - Zulu JDK 17.0.16
@@ -62,6 +62,6 @@ if you never rebuild.
 - Gradle 8.2.1, Capacitor 6
 
 Gradle and Maven are pointed at the Huawei Cloud mirror in
-`AndroidBuildTools/gradle-home/init.gradle` — the default hosts run at
+`AndroidBuildTools/gradle-home/init.gradle`: the default hosts run at
 ~12 KB/s here versus ~790 KB/s on the mirror. Keep that init script or a
 rebuild will crawl.
